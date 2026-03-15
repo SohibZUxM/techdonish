@@ -27,6 +27,19 @@ const ROLE_LABELS = {
   admin: "Admin Portal",
 };
 
+const PUBLIC_DEMO_CREDENTIALS = {
+  student: {
+    email: "demonstudent@gmail.com",
+    password: "demo1234",
+    description: "Explore the student dashboard with sample coursework and progress.",
+  },
+  teacher: {
+    email: "demoteacher@gmail.com",
+    password: "demo1234",
+    description: "Review the teacher dashboard with demo classes, grades, and resources.",
+  },
+};
+
 const isFirestoreOfflineError = (err) => {
   const message = String(err?.message || "");
   return err?.code === "unavailable" || /client is offline|offline/i.test(message);
@@ -46,6 +59,7 @@ export default function PortalLogin() {
   const roleLabel = ROLE_LABELS[role] || "Access Portal";
   const niceRole =
     role && ROLE_LABELS[role] ? ROLE_LABELS[role].split(" ")[0] : "";
+  const demoCredentials = PUBLIC_DEMO_CREDENTIALS[role] || null;
 
   const isLogin = mode === "login";
   const urlRole = role; // role from URL (portal)
@@ -246,6 +260,39 @@ export default function PortalLogin() {
             ? "Please sign in to your account"
             : "Fill in your details to get started"}
         </p>
+
+        {isLogin && demoCredentials && (
+          <div className="portal-demo-card">
+            <div className="portal-demo-header">
+              <div>
+                <p className="portal-demo-eyebrow">Recruiter Demo Access</p>
+                <h3 className="portal-demo-title">{niceRole} Demo Account</h3>
+              </div>
+              <button
+                type="button"
+                className="portal-demo-button"
+                onClick={() => {
+                  setEmail(demoCredentials.email);
+                  setPassword(demoCredentials.password);
+                  setError("");
+                }}
+              >
+                Use demo account
+              </button>
+            </div>
+            <p className="portal-demo-description">{demoCredentials.description}</p>
+            <div className="portal-demo-credentials">
+              <div className="portal-demo-row">
+                <span className="portal-demo-label">Email</span>
+                <code>{demoCredentials.email}</code>
+              </div>
+              <div className="portal-demo-row">
+                <span className="portal-demo-label">Password</span>
+                <code>{demoCredentials.password}</code>
+              </div>
+            </div>
+          </div>
+        )}
 
         {error && <p className="portal-error-text">{error}</p>}
 
