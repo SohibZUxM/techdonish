@@ -1,3 +1,27 @@
+# Hamsafar Learning Platform
+
+A frontend-focused learning management system built with React and TypeScript.
+
+## Features
+- Role-based dashboards (students, teachers)
+- Responsive UI design
+- Modular component architecture
+- REST API integration
+
+## Tech Stack
+React  
+TypeScript  
+HTML5  
+CSS3  
+Vite  
+
+## Screenshots
+(Add screenshots here)
+
+## Installation
+npm install  
+npm run dev
+
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
