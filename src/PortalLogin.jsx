@@ -265,7 +265,7 @@ export default function PortalLogin() {
           <div className="portal-demo-card">
             <div className="portal-demo-header">
               <div>
-                <p className="portal-demo-eyebrow">Recruiter Demo Access</p>
+                <p className="portal-demo-eyebrow">Demo Access</p>
                 <h3 className="portal-demo-title">{niceRole} Demo Account</h3>
               </div>
               <button
