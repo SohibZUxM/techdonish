@@ -1,0 +1,750 @@
+/* =============== GLOBAL / ROOT =============== */
+.sp-root {
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f3f4f6;
+  color: #111827;
+}
+
+/* =============== HEADER =============== */
+.sp-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 72px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+}
+
+.sp-topbar-inner {
+  width: 100%;
+  padding: 0 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Header left: logo + search */
+.sp-header-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.sp-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.sp-logo-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+/* Search */
+.sp-search {
+  display: flex;
+  align-items: center;
+  background: #f3f4f6;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px rgb(180, 174, 174) solid;
+  width: min(660px, 45vw);
+}
+
+.sp-search-icon {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+.sp-search input {
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  font-size: 14px;
+}
+
+/* Header right: bell + profile */
+.sp-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+}
+
+.sp-bell {
+  position: relative;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.sp-bell-badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  padding: 2px 6px;
+  font-size: 11px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.sp-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.sp-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f97316, #facc15);
+}
+
+.sp-profile-info {
+  line-height: 1.15;
+}
+
+.sp-profile-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sp-profile-sub {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.sp-profile-arrow {
+  font-size: 11px;
+}
+
+/* =============== SIDEBAR =============== */
+.sp-sidebar {
+  position: fixed;
+  top: 72px;
+  /* directly under header */
+  left: 0;
+  width: 260px;
+  height: calc(100vh - 72px);
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  padding: 24px 18px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.sp-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sp-nav-item {
+  text-align: left;
+  padding: 13px 15px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 550;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sp-nav-item:hover {
+  background: #f3f4ff;
+}
+
+.sp-nav-item.active {
+  background: #e0e7ff;
+  color: #4f46e5;
+  font-weight: 600;
+}
+
+.sp-sidebar-divider {
+  width: 100%;
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 100px 0 12px;
+}
+
+.sp-nav-wrapper {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.sp-sidebar-bottom {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sp-nav-item.small {
+  font-size: 16px;
+}
+
+/* =============== MAIN CONTAINER =============== */
+.sp-main {
+  margin-top: 72px;
+  margin-left: 260px;
+  /* match sidebar width */
+  min-height: calc(100vh - 72px);
+  background: #f3f4f6;
+}
+
+.sp-content {
+  padding: 26px 30px 32px;
+  max-width: 1400px;
+}
+
+/* =============== WELCOME SECTION =============== */
+.sp-welcome {
+  margin-bottom: 10px;
+}
+
+.sp-welcome h1 {
+  font-size: 32px;
+  margin-bottom: 6px;
+}
+
+.sp-welcome p {
+  color: #6b7280;
+}
+
+/* =============== STATS CARDS =============== */
+.sp-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 22px;
+  margin-bottom: 26px;
+}
+
+.sp-stat-card {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  padding: 18px 18px 20px;
+}
+
+.sp-stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  font-size: 20px;
+}
+
+.sp-stat-icon.blue {
+  background: #e0edff;
+  color: #2563eb;
+}
+
+.sp-stat-icon.green {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.sp-stat-icon.purple {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+.sp-stat-icon.orange {
+  background: #ffedd5;
+  color: #ea580c;
+}
+
+.sp-stat-number {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.sp-stat-label {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* =============== MAIN GRID LAYOUT (Dashboard only) =============== */
+.sp-main-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 22px;
+}
+
+/* Generic box (grades, assignments, announcements) */
+.sp-box {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  padding: 20px 22px;
+  margin-bottom: 20px;
+}
+
+.sp-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.sp-box-header h2 {
+  font-size: 20px;
+}
+
+.sp-section-divider {
+  width: 100%;
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 14px 0;
+}
+
+.sp-link-button {
+  border: none;
+  background: transparent;
+  color: #4f46e5;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sp-link-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sp-link-button.full {
+  width: 100%;
+  text-align: center;
+  margin-top: 10px;
+}
+
+/* =============== “MY COURSES” SHOULD LOOK LIKE CLASSES =============== */
+/* We will render courses using the same visual row style as class/grade items */
+.sp-course-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 10px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-left: 4px solid #3b82f6;
+  /* consistent blue accent like your border-blue */
+}
+
+.sp-course-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sp-course-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  background: #e0edff;
+  color: #2563eb;
+}
+
+.sp-course-title {
+  font-size: 17px;
+  margin: 0;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sp-course-sub {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 2px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sp-course-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+
+.sp-course-chip {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+/* =============== GRADES / CLASSES ITEMS =============== */
+.sp-grade-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 10px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-left: 4px solid transparent;
+}
+
+.sp-grade-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sp-grade-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.bg-blue {
+  background: #e0edff;
+  color: #2563eb;
+}
+
+.bg-purple {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+.bg-green {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.bg-orange {
+  background: #ffedd5;
+  color: #ea580c;
+}
+
+.sp-grade-item h3 {
+  font-size: 17px;
+  margin-bottom: 2px;
+}
+
+.sp-grade-item p {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.sp-grade-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+
+.sp-grade-letter {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.grade-a {
+  color: #16a34a;
+}
+
+.grade-b {
+  color: #2563eb;
+}
+
+.grade-c {
+  color: #d97706;
+}
+
+.grade-d {
+  color: #ea580c;
+}
+
+.grade-f {
+  color: #dc2626;
+}
+
+.grade-na {
+  color: #9ca3af;
+}
+
+
+.sp-grade-score {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.sp-error-text {
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+.sp-muted {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+/* Borders on left side by type */
+.border-blue {
+  border-left-color: #3b82f6;
+}
+
+.border-purple {
+  border-left-color: #a855f7;
+}
+
+.border-green {
+  border-left-color: #22c55e;
+}
+
+.border-orange {
+  border-left-color: #f97316;
+}
+
+/* =============== UPCOMING ASSIGNMENTS =============== */
+.sp-assignment-card {
+  padding: 14px 12px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  border-left: 4px solid transparent;
+  position: relative;
+}
+
+.sp-assignment-card h3 {
+  font-size: 20px;
+  margin-bottom: 2px;
+}
+
+.sp-assignment-card p {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.sp-assignment-date {
+  margin-top: 4px;
+}
+
+/* color themes */
+.soft-red {
+  background: #fef2f2;
+  border-left-color: #ef4444;
+}
+
+.soft-yellow {
+  background: #fffbeb;
+  border-left-color: #f59e0b;
+}
+
+.soft-blue {
+  background: #eff6ff;
+  border-left-color: #3b82f6;
+}
+
+.soft-green {
+  background: #ecfdf5;
+  border-left-color: #22c55e;
+}
+
+/* priority pill */
+.sp-pill {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sp-pill.high {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.sp-pill.medium {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.sp-pill.normal {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.sp-pill.low {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+/* =============== ANNOUNCEMENTS =============== */
+.sp-right-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.sp-announcement {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.sp-announcement:last-of-type {
+  border-bottom: none;
+}
+
+.sp-ann-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.sp-announcement h4 {
+  font-size: 18px;
+  margin-bottom: 2px;
+}
+
+.sp-announcement p {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 3px;
+}
+
+.sp-announcement span {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* =============== QUICK ACTIONS =============== */
+.sp-quick-actions {
+  margin-top: 16px;
+  padding: 20px 22px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #f9fafb;
+}
+
+.sp-quick-actions h2 {
+  margin-bottom: 14px;
+}
+
+.qa-btn {
+  width: 100%;
+  border-radius: 10px;
+  border: none;
+  padding: 16px;
+  margin-bottom: 10px;
+  background: #ffffff;
+  color: #4f46e5;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.qa-btn:last-child {
+  margin-bottom: 0;
+}
+
+/* =============== HELP BUTTON =============== */
+.sp-help-btn {
+  position: fixed;
+  bottom: 26px;
+  right: 26px;
+  width: 54px;
+  height: 54px;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 26px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  z-index: 500;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.sp-help-btn:hover {
+  transform: scale(1.07);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+}
+
+/* =============== RESPONSIVE =============== */
+@media (max-width: 1100px) {
+  .sp-search {
+    width: min(520px, 40vw);
+  }
+
+  .sp-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sp-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 820px) {
+  .sp-sidebar {
+    width: 220px;
+  }
+
+  .sp-main {
+    margin-left: 220px;
+  }
+
+  .sp-search {
+    display: none;
+  }
+}
