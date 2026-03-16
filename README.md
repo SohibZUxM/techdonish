@@ -16,7 +16,7 @@ CSS3
 Vite  
 
 ## Screenshots
-(Add screenshots here)
+
 
 ## Installation
 npm install  
