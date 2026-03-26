@@ -13,7 +13,7 @@ import { db, auth } from "./firebase";
 
 import {
   collection,doc,updateDoc,addDoc,setDoc,getDoc,getDocs,deleteDoc,
-  serverTimestamp,query,orderBy,where,limit,writeBatch,
+  serverTimestamp,query,orderBy,where,limit,writeBatch,arrayUnion,arrayRemove,
 } from "firebase/firestore";
 import useRealtimeList from "./useRealtimeList";
 
@@ -22,10 +22,11 @@ export default function AdminPage() {
 
   // ========== UI STATE ==========
   const [activeTab, setActiveTab] = useState("dashboard"); // dashboard|courses|classes|students|teachers|parents
-  const [modal, setModal] = useState(null); // course|class|enroll|assignTeacher|null
+  const [modal, setModal] = useState(null); // course|class|enroll|assignTeacher|linkParentChild|null
   const [selectedClassId, setSelectedClassId] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [parentLinkTarget, setParentLinkTarget] = useState("");
 
   // ========== PROFILE ==========
   const [adminProfile, setAdminProfile] = useState({
@@ -105,13 +106,37 @@ export default function AdminPage() {
   );
 
   const getClassName = useCallback(
-    (classId) => classes.find((c) => c.id === classId)?.name || classId || "—",
+    (classId) => {
+      const cls = classes.find((c) => c.id === classId);
+      return cls?.name || cls?.code || "Class";
+    },
     [classes]
   );
 
   const getUserLabel = useCallback((list, uid) => {
     const u = list.find((x) => x.id === uid);
     return u?.fullName || u?.email || "Unknown";
+  }, []);
+
+  const getParentChildIds = useCallback((parent) => {
+    if (Array.isArray(parent?.childStudentIds)) {
+      return [...new Set(parent.childStudentIds.filter(Boolean).map(String))];
+    }
+    if (Array.isArray(parent?.children)) {
+      return [
+        ...new Set(
+          parent.children
+            .map((child) =>
+              typeof child === "string"
+                ? child
+                : child?.studentUid || child?.uid || child?.id || null
+            )
+            .filter(Boolean)
+            .map(String)
+        ),
+      ];
+    }
+    return [];
   }, []);
 
   const writeActivity = useCallback(async (dot, text) => {
@@ -263,8 +288,9 @@ export default function AdminPage() {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const name = String(fd.get("name") || "").trim();
+    const code = String(fd.get("code") || "").trim().toUpperCase();
     const courseId = String(fd.get("courseId") || "");
-    if (!name || !courseId) return;
+    if (!name || !code || !courseId) return;
 
     const dupQ = query(
       collection(db, "classes"),
@@ -278,8 +304,16 @@ export default function AdminPage() {
       return;
     }
 
+    const dupCodeQ = query(collection(db, "classes"), where("code", "==", code), limit(1));
+    const dupCodeSnap = await getDocs(dupCodeQ);
+    if (!dupCodeSnap.empty) {
+      alert(`Class code "${code}" already exists.`);
+      return;
+    }
+
     await addDoc(collection(db, "classes"), {
       name,
+      code,
       courseId,
       teacherUid: null,      
       teacherName: null,     
@@ -340,6 +374,41 @@ export default function AdminPage() {
     );
 
     closeModal();
+  };
+
+  const handleLinkStudentToParent = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const parentUid = String(fd.get("parentUid") || "").trim();
+    const studentUid = String(fd.get("studentUid") || "").trim();
+    if (!parentUid || !studentUid) return;
+
+    await updateDoc(doc(db, "users", parentUid), {
+      childStudentIds: arrayUnion(studentUid),
+      updatedAt: serverTimestamp(),
+      updatedBy: auth.currentUser?.uid || null,
+    });
+
+    await writeActivity(
+      "dot-purple",
+      `Linked "${getUserLabel(activeStudents, studentUid)}" to parent "${getUserLabel(activeParents, parentUid)}"`
+    );
+
+    setParentLinkTarget(parentUid);
+    closeModal();
+  };
+
+  const handleUnlinkStudentFromParent = async (parentUid, studentUid) => {
+    await updateDoc(doc(db, "users", parentUid), {
+      childStudentIds: arrayRemove(studentUid),
+      updatedAt: serverTimestamp(),
+      updatedBy: auth.currentUser?.uid || null,
+    });
+
+    await writeActivity(
+      "dot-orange",
+      `Unlinked "${getUserLabel(activeStudents, studentUid)}" from parent "${getUserLabel(activeParents, parentUid)}"`
+    );
   };
 
   const handleRemoveStudentFromClass = async (studentUid, classId) => {
@@ -428,6 +497,14 @@ export default function AdminPage() {
   const disableTeacher = (uid) => disableUser(uid, "teacher");
   const disableStudent = (uid) => disableUser(uid, "student");
   const disableParent = (uid) => disableUser(uid, "parent");
+  const adminTabs = [
+    { id: "dashboard", label: "Dashboard" },
+    { id: "courses", label: "Courses" },
+    { id: "classes", label: "Classes" },
+    { id: "teachers", label: "Teachers" },
+    { id: "students", label: "Students" },
+    { id: "parents", label: "Parents" },
+  ];
 
   // ========== RENDER ==========
   return (
@@ -614,6 +691,24 @@ export default function AdminPage() {
           </div>
         </header>
 
+        <div className="ap-mobile-nav" aria-label="Admin portal navigation">
+          <label htmlFor="ap-mobile-tab-select" className="ap-mobile-nav-label">
+            Section
+          </label>
+          <select
+            id="ap-mobile-tab-select"
+            className="ap-mobile-nav-select"
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value)}
+          >
+            {adminTabs.map((tab) => (
+              <option key={tab.id} value={tab.id}>
+                {tab.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="ap-content">
           {/* DASHBOARD */}
           {activeTab === "dashboard" && (
@@ -757,7 +852,7 @@ export default function AdminPage() {
                             <div className="ap-activity-text" style={{ minWidth: 0 }}>
                               <div style={{ fontWeight: 600 }}>{cl.name}</div>
                               <div style={{ fontSize: 12, color: "#6b7280" }}>
-                                Course: {getCourseName(cl.courseId)} • Teacher: {teacherLabel}
+                                Code: {cl.code || "Not set"} • Course: {getCourseName(cl.courseId)} • Teacher: {teacherLabel}
                               </div>
                             </div>
                           </div>
@@ -845,7 +940,7 @@ export default function AdminPage() {
                     const classNames =
                       myClasses.length === 0
                         ? "Not assigned"
-                        : myClasses.map((cl) => cl.name).join(", ");
+                        : myClasses.map((cl) => cl.name || cl.code || "Class").join(", ");
 
                     return (
                       <div
@@ -928,7 +1023,12 @@ export default function AdminPage() {
                     const classNames =
                       myEnrolls.length === 0
                         ? "Not enrolled"
-                        : myEnrolls.map((e) => classes.find((c) => c.id === e.classId)?.name || e.classId).join(", ");
+                        : myEnrolls
+                            .map((e) => {
+                              const cls = classes.find((c) => c.id === e.classId);
+                              return cls?.name || cls?.code || "Class";
+                            })
+                            .join(", ");
 
                     return (
                       <div
@@ -979,47 +1079,119 @@ export default function AdminPage() {
                 style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
               >
                 <span>Parents</span>
+                <button
+                  className="ap-modal-btn"
+                  type="button"
+                  onClick={() => {
+                    setParentLinkTarget(activeParents[0]?.id || "");
+                    setModal("linkParentChild");
+                  }}
+                  disabled={activeParents.length === 0 || activeStudents.length === 0}
+                >
+                  + Link Student
+                </button>
               </div>
 
               {activeParents.length === 0 ? (
                 <div style={{ color: "#6b7280" }}>No active parents yet.</div>
               ) : (
                 <div className="ap-activity">
-                  {activeParents.map((p) => (
-                    <div
-                      key={p.id}
-                      className="ap-activity-row"
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr auto",
-                        gap: 12,
-                        alignItems: "center",
-                        width: "100%",
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                        <span className="ap-dot dot-pink" />
-                        <div className="ap-activity-text" style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {p.fullName || p.email}
-                          </div>
-                          <div style={{ fontSize: 12, color: "#6b7280", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {p.email}
+                  {activeParents.map((p) => {
+                    const linkedIds = getParentChildIds(p);
+                    const linkedLabels =
+                      linkedIds.length === 0
+                        ? []
+                        : linkedIds.map((studentUid) => ({
+                            id: studentUid,
+                            label: getUserLabel(activeStudents, studentUid),
+                          }));
+
+                    return (
+                      <div
+                        key={p.id}
+                        className="ap-activity-row"
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr auto",
+                          gap: 12,
+                          alignItems: "start",
+                          width: "100%",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, minWidth: 0 }}>
+                          <span className="ap-dot dot-pink" />
+                          <div className="ap-activity-text" style={{ minWidth: 0, width: "100%" }}>
+                            <div style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {p.fullName || p.email}
+                            </div>
+                            <div style={{ fontSize: 12, color: "#6b7280", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {p.email} • Linked students: {linkedIds.length}
+                            </div>
+
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+                              {linkedLabels.length === 0 ? (
+                                <span style={{ fontSize: 12, color: "#6b7280" }}>No students linked yet.</span>
+                              ) : (
+                                linkedLabels.map((student) => (
+                                  <span
+                                    key={student.id}
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 6,
+                                      borderRadius: 999,
+                                      background: "#edf4ff",
+                                      color: "#1d4ed8",
+                                      padding: "6px 10px",
+                                      fontSize: 12,
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    <span>{student.label}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUnlinkStudentFromParent(p.id, student.id)}
+                                      style={{
+                                        border: "none",
+                                        background: "transparent",
+                                        color: "#1d4ed8",
+                                        cursor: "pointer",
+                                        fontSize: 12,
+                                        padding: 0,
+                                      }}
+                                      aria-label={`Remove ${student.label}`}
+                                    >
+                                      ✕
+                                    </button>
+                                  </span>
+                                ))
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <button
-                          type="button"
-                          className="ap-modal-btn ghost"
-                          onClick={() => disableParent(p.id)}
-                        >
-                          Disable
-                        </button>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button
+                            type="button"
+                            className="ap-modal-btn ghost"
+                            onClick={() => {
+                              setParentLinkTarget(p.id);
+                              setModal("linkParentChild");
+                            }}
+                          >
+                            Link Student
+                          </button>
+                          <button
+                            type="button"
+                            className="ap-modal-btn ghost"
+                            onClick={() => disableParent(p.id)}
+                          >
+                            Disable
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </section>
@@ -1036,6 +1208,7 @@ export default function AdminPage() {
                   {modal === "class" && "Add Class"}
                   {modal === "enroll" && "Enroll Student"}
                   {modal === "assignTeacher" && "Assign Teacher"}
+                  {modal === "linkParentChild" && "Link Parent to Student"}
                 </div>
                 <button className="ap-modal-x" onClick={closeModal} aria-label="Close" type="button">
                   <X size={18} />
@@ -1059,6 +1232,8 @@ export default function AdminPage() {
                 <form className="ap-modal-form" onSubmit={handleAddClass}>
                   <label>Class Name</label>
                   <input name="name" required placeholder="e.g., Grade 10 - A" />
+                  <label>Class Code</label>
+                  <input name="code" required placeholder="e.g., G10A" />
                   <label>Course</label>
                   <select name="courseId" required>
                     <option value="">Select course...</option>
@@ -1129,6 +1304,46 @@ export default function AdminPage() {
                   <div className="ap-modal-actions">
                     <button type="button" className="ap-modal-btn ghost" onClick={closeModal}>Cancel</button>
                     <button className="ap-modal-btn" type="submit">Save</button>
+                  </div>
+                </form>
+              )}
+
+              {modal === "linkParentChild" && (
+                <form className="ap-modal-form" onSubmit={handleLinkStudentToParent}>
+                  <label>Parent</label>
+                  <select
+                    name="parentUid"
+                    required
+                    value={parentLinkTarget}
+                    onChange={(e) => setParentLinkTarget(e.target.value)}
+                  >
+                    <option value="">Select parent...</option>
+                    {activeParents.map((parent) => (
+                      <option key={parent.id} value={parent.id}>
+                        {parent.fullName || parent.email}
+                      </option>
+                    ))}
+                  </select>
+
+                  <label>Student</label>
+                  <select name="studentUid" required>
+                    <option value="">Select student...</option>
+                    {activeStudents
+                      .filter((student) => {
+                        if (!parentLinkTarget) return true;
+                        const parent = activeParents.find((item) => item.id === parentLinkTarget);
+                        return !getParentChildIds(parent).includes(student.id);
+                      })
+                      .map((student) => (
+                        <option key={student.id} value={student.id}>
+                          {student.fullName || student.email}
+                        </option>
+                      ))}
+                  </select>
+
+                  <div className="ap-modal-actions">
+                    <button type="button" className="ap-modal-btn ghost" onClick={closeModal}>Cancel</button>
+                    <button className="ap-modal-btn" type="submit">Link</button>
                   </div>
                 </form>
               )}

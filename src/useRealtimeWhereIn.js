@@ -14,7 +14,7 @@ export default function useRealtimeWhereIn(
   ids,
   enabled = true
 ) {
-  const [state, setState] = useState({ key: "", map: {} });
+  const [state, setState] = useState({ key: "", chunks: {} });
 
   const stableIds = useMemo(() => {
     const clean = (Array.isArray(ids) ? ids : []).filter(Boolean).map(String);
@@ -33,6 +33,7 @@ export default function useRealtimeWhereIn(
 
     const colRef = collection(db, collectionName);
     const unsubs = idChunks.map((ids10) => {
+      const chunkKey = ids10.join("|");
       const chunkQuery = query(colRef, where(fieldName, "in", ids10));
 
       return onSnapshot(
@@ -45,9 +46,9 @@ export default function useRealtimeWhereIn(
 
           setState((prev) => ({
             key: stateKey,
-            map: {
-              ...(prev.key === stateKey ? prev.map : {}),
-              ...next,
+            chunks: {
+              ...(prev.key === stateKey ? prev.chunks : {}),
+              [chunkKey]: next,
             },
           }));
         },
@@ -63,6 +64,6 @@ export default function useRealtimeWhereIn(
       return [];
     }
 
-    return Object.values(state.map);
+    return Object.values(state.chunks).flatMap((chunkMap) => Object.values(chunkMap));
   }, [enabled, idsKey, state, stateKey]);
 }

@@ -423,11 +423,18 @@ export default function TeacherPage() {
   };
 
   // ========== UI STATE ==========
-  const [activeTab, setActiveTab] = useState("dashboard"); // dashboard|classes|exams|gradebook|students|schedule|reports
-  const [modal, setModal] = useState(null); // exam|grade|schedule|null
+  const [activeTab, setActiveTab] = useState("dashboard"); // dashboard|classes|exams|gradebook|attendance|students|schedule|reports|resources
+  const [modal, setModal] = useState(null); // exam|grade|attendance|schedule|resource|null
   const [selectedClassId, setSelectedClassId] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [attendanceDraft, setAttendanceDraft] = useState({
+    classId: "",
+    studentUid: "",
+    status: "present",
+    date: new Date().toISOString().slice(0, 10),
+    note: "",
+  });
 
   // ========== AUTH/UID STATE (FIX) ==========
   const [teacherUid, setTeacherUid] = useState(null);
@@ -590,17 +597,27 @@ export default function TeacherPage() {
       [...recentGradesRaw]
         .sort(
           (a, b) =>
-            getTimestampValue(b.createdAt) - getTimestampValue(a.createdAt)
+            getTimestampValue(b.date || b.createdAt) - getTimestampValue(a.date || a.createdAt)
         )
         .slice(0, 8),
     [recentGradesRaw]
   );
+
+  const dashboardRecentGrades = useMemo(() => recentGrades.slice(0, 4), [recentGrades]);
 
   // ========== HELPERS ==========
   const closeModal = () => setModal(null);
 
   const getClassById = useCallback(
     (classId) => myClasses.find((c) => c.id === classId) || null,
+    [myClasses]
+  );
+
+  const getClassLabel = useCallback(
+    (classId) => {
+      const cls = myClasses.find((c) => c.id === classId);
+      return cls?.name || cls?.code || "Class";
+    },
     [myClasses]
   );
 
@@ -701,7 +718,7 @@ export default function TeacherPage() {
   const studentClassesMap = useMemo(() => {
     const entries = {};
     Object.entries(allEnrollmentsMap).forEach(([classId, studentIds]) => {
-      const className = getClassById(classId)?.name || classId;
+      const className = getClassLabel(classId);
       (studentIds || []).forEach((studentUid) => {
         if (!studentUid) return;
         if (!entries[studentUid]) entries[studentUid] = [];
@@ -712,7 +729,7 @@ export default function TeacherPage() {
     });
     Object.values(entries).forEach((classNames) => classNames.sort());
     return entries;
-  }, [allEnrollmentsMap, getClassById]);
+  }, [allEnrollmentsMap, getClassLabel]);
 
   const stats = useMemo(() => {
     const classCount = myClasses.length;
@@ -770,6 +787,7 @@ export default function TeacherPage() {
     const studentUid = String(fd.get("studentUid") || "");
     const examIdRaw = String(fd.get("examId") || ""); // optional
     const label = String(fd.get("label") || "").trim(); // optional
+    const dateStr = String(fd.get("date") || "").trim();
     const score = Number(fd.get("score") || 0);
 
     const maxScoreInput = fd.get("maxScore");
@@ -790,6 +808,7 @@ export default function TeacherPage() {
       studentUid,
       examId: examIdRaw || null,
       label: label || (ex?.title ?? null),
+      date: dateStr ? new Date(`${dateStr}T00:00:00`) : null,
       score,
       maxScore: finalMaxScore,
       teacherUid: teacherUid || null,
@@ -830,6 +849,37 @@ export default function TeacherPage() {
     closeModal();
   };
 
+  const handleAddAttendance = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+
+    const classId = String(fd.get("classId") || "").trim();
+    const studentUid = String(fd.get("studentUid") || "").trim();
+    const status = String(fd.get("status") || "present").trim().toLowerCase();
+    const dateStr = String(fd.get("date") || "").trim();
+    const note = String(fd.get("note") || "").trim();
+
+    if (!classId || !studentUid || !dateStr) return;
+
+    const attendanceDocId = `${classId}_${studentUid}_${dateStr}`;
+    await setDoc(
+      doc(db, "attendance", attendanceDocId),
+      {
+        classId,
+        studentUid,
+        status,
+        date: new Date(`${dateStr}T00:00:00`),
+        note: note || null,
+        teacherUid: teacherUid || null,
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    closeModal();
+  };
+
   const handleScheduleClass = async (e) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -858,7 +908,46 @@ export default function TeacherPage() {
     closeModal();
   };
 
+  const myAttendanceRaw = useRealtimeWhereIn(
+    "attendance",
+    "teacherUid",
+    teacherLookupIds,
+    teacherLookupIds.length > 0 && authReady
+  );
+
+  const myAttendance = useMemo(
+    () =>
+      [...myAttendanceRaw].sort(
+        (a, b) =>
+          getTimestampValue(b.date || b.createdAt) - getTimestampValue(a.date || a.createdAt)
+      ),
+    [myAttendanceRaw]
+  );
+
   const selectedClass = selectedClassId ? getClassById(selectedClassId) : null;
+
+  const latestAttendanceByStudent = useMemo(() => {
+    const map = new Map();
+    myAttendance.forEach((item) => {
+      if (!selectedClassId || item.classId !== selectedClassId || !item.studentUid) return;
+      if (!map.has(item.studentUid)) {
+        map.set(item.studentUid, item);
+      }
+    });
+    return map;
+  }, [myAttendance, selectedClassId]);
+
+  const openAttendanceModal = (studentUid = "", classId = selectedClassId || myClasses[0]?.id || "") => {
+    if (classId) setSelectedClassId(classId);
+    setAttendanceDraft({
+      classId,
+      studentUid,
+      status: "present",
+      date: new Date().toISOString().slice(0, 10),
+      note: "",
+    });
+    setModal("attendance");
+  };
 
   // Sessions this teacher has scheduled (simple list for Schedule tab)
   const mySessionsRaw = useRealtimeWhereIn(
@@ -903,10 +992,26 @@ export default function TeacherPage() {
   const allMyGrades = useMemo(
     () =>
       [...allMyGradesRaw].sort(
-        (a, b) => getTimestampValue(b.createdAt) - getTimestampValue(a.createdAt)
+        (a, b) => getTimestampValue(b.date || b.createdAt) - getTimestampValue(a.date || a.createdAt)
       ),
     [allMyGradesRaw]
   );
+
+  const selectedClassGrades = useMemo(() => {
+    if (!selectedClassId) return [];
+    return allMyGrades.filter((item) => item.classId === selectedClassId);
+  }, [allMyGrades, selectedClassId]);
+  const teacherTabs = [
+    { id: "dashboard", label: "Dashboard" },
+    { id: "classes", label: "My Classes" },
+    { id: "exams", label: "Exams" },
+    { id: "gradebook", label: "Gradebook" },
+    { id: "attendance", label: "Attendance" },
+    { id: "students", label: "Students" },
+    { id: "schedule", label: "Schedule" },
+    { id: "reports", label: "Reports" },
+    { id: "resources", label: "Resources" },
+  ];
 
   if (!authReady) {
     return <div style={{ padding: 30, color: "#6b7280" }}>Loading...</div>;
@@ -969,6 +1074,18 @@ export default function TeacherPage() {
             >
               <FiCheckSquare className="tp-nav-icon" />
               <span>Gradebook</span>
+            </button>
+
+            <button
+              className={`tp-nav-item ${activeTab === "attendance" ? "tp-nav-item-active" : ""}`}
+              onClick={() => {
+                setModal(null);
+                setActiveTab("attendance");
+              }}
+              type="button"
+            >
+              <FiCalendar className="tp-nav-icon" />
+              <span>Attendance</span>
             </button>
 
             <button
@@ -1136,6 +1253,27 @@ export default function TeacherPage() {
           </div>
         </header>
 
+        <div className="tp-mobile-nav" aria-label="Teacher portal navigation">
+          <label htmlFor="tp-mobile-tab-select" className="tp-mobile-nav-label">
+            Section
+          </label>
+          <select
+            id="tp-mobile-tab-select"
+            className="tp-mobile-nav-select"
+            value={activeTab}
+            onChange={(e) => {
+              setModal(null);
+              setActiveTab(e.target.value);
+            }}
+          >
+            {teacherTabs.map((tab) => (
+              <option key={tab.id} value={tab.id}>
+                {tab.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <main className="tp-content">
           {/* ===== DASHBOARD ===== */}
           {activeTab === "dashboard" && (
@@ -1195,22 +1333,30 @@ export default function TeacherPage() {
                 <div className="tp-card">
                   <div className="tp-card-header">
                     <h3>Recent Grades</h3>
+                    <button
+                      className="tp-link-button"
+                      type="button"
+                      onClick={() => setActiveTab("gradebook")}
+                      disabled={recentGrades.length === 0}
+                    >
+                      View all
+                    </button>
                   </div>
 
                   {recentGrades.length === 0 ? (
                     <div style={{ color: "#6b7280" }}>No grades yet.</div>
                   ) : (
                     <ul className="tp-announce-list" style={{ marginTop: 10 }}>
-                      {recentGrades.map((g) => (
+                      {dashboardRecentGrades.map((g) => (
                         <li key={g.id} className="tp-announce-item tp-announce-blue">
                           <p className="tp-announce-title">
                             {(g.examId ? getExamLabel(g.examId) : (g.label || "Grade"))} •{" "}
                             {getStudentLabel(g.studentUid)}
                           </p>
                           <p className="tp-announce-text">
-                            Class: {getClassById(g.classId)?.name || g.classId} • Score: {g.score}/{g.maxScore}
+                            Class: {getClassLabel(g.classId)} • Score: {g.score}/{g.maxScore}
                           </p>
-                          <span className="tp-announce-time">{safeDateLabel(g.createdAt)}</span>
+                          <span className="tp-announce-time">{safeDateLabel(g.date || g.createdAt)}</span>
                         </li>
                       ))}
                     </ul>
@@ -1245,7 +1391,7 @@ export default function TeacherPage() {
                       >
                         <div>
                           <p className="tp-class-name">{cl.name}</p>
-                          <p className="tp-class-sub">Class ID: {cl.id}</p>
+                          <p className="tp-class-sub">Code: {cl.code || "Not set"}</p>
                           <p className="tp-class-time">{isSelected ? "Selected" : "Click to view students"}</p>
                         </div>
                         <span className={`tp-class-pill ${isSelected ? "tp-class-pill-active" : ""}`}>
@@ -1261,6 +1407,15 @@ export default function TeacherPage() {
                 <div className="tp-card-header">
                   <h3>Enrolled Students</h3>
                   <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      className="tp-cta tp-cta-small"
+                      type="button"
+                      onClick={() => openAttendanceModal()}
+                      disabled={!selectedClassId}
+                      title={!selectedClassId ? "Select a class first" : ""}
+                    >
+                      Attendance
+                    </button>
                     <button
                       className="tp-cta tp-cta-small"
                       type="button"
@@ -1319,7 +1474,7 @@ export default function TeacherPage() {
                     <li key={ex.id} className="tp-announce-item tp-announce-yellow">
                       <p className="tp-announce-title">{ex.title}</p>
                       <p className="tp-announce-text">
-                        Class: {getClassById(ex.classId)?.name || ex.classId} • Max: {ex.maxScore} • Date:{" "}
+                        Class: {getClassLabel(ex.classId)} • Max: {ex.maxScore} • Date:{" "}
                         {ex.date ? safeDateLabel(ex.date) : "—"}
                       </p>
                       <span className="tp-announce-time">{safeDateLabel(ex.createdAt)}</span>
@@ -1332,32 +1487,193 @@ export default function TeacherPage() {
 
           {/* ===== GRADEBOOK ===== */}
           {activeTab === "gradebook" && (
-            <section className="tp-card">
-              <div className="tp-card-header">
-                <h3>Gradebook</h3>
-                <button className="tp-cta tp-cta-small" type="button" onClick={() => setModal("grade")}>
-                  + Add Grade
-                </button>
+            <section className="tp-middle-row">
+              <div className="tp-card">
+                <div className="tp-card-header">
+                  <h3>My Classes</h3>
+                </div>
+
+                {myClasses.length === 0 ? (
+                  <div style={{ color: "#6b7280" }}>No classes assigned to you yet.</div>
+                ) : (
+                  myClasses.map((cl) => {
+                    const isSelected = selectedClassId === cl.id;
+                    const gradeCount = allMyGrades.filter((item) => item.classId === cl.id).length;
+                    return (
+                      <div
+                        key={cl.id}
+                        className={`tp-class-card ${isSelected ? "tp-class-card-active" : ""}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedClassId(cl.id)}
+                        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setSelectedClassId(cl.id)}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <div>
+                          <p className="tp-class-name">{cl.name}</p>
+                          <p className="tp-class-sub">Code: {cl.code || "Not set"}</p>
+                          <p className="tp-class-time">
+                            {isSelected
+                              ? `Showing ${gradeCount} grade record${gradeCount !== 1 ? "s" : ""}`
+                              : "Click to open grade records"}
+                          </p>
+                        </div>
+                        <span className={`tp-class-pill ${isSelected ? "tp-class-pill-active" : ""}`}>
+                          {isSelected ? "Active" : gradeCount}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
               </div>
 
-              {recentGrades.length === 0 ? (
-                <div style={{ color: "#6b7280" }}>No grades yet.</div>
-              ) : (
-                <ul className="tp-announce-list" style={{ marginTop: 10 }}>
-                  {recentGrades.map((g) => (
-                    <li key={g.id} className="tp-announce-item tp-announce-blue">
-                      <p className="tp-announce-title">
-                        {(g.examId ? getExamLabel(g.examId) : (g.label || "Grade"))} •{" "}
-                        {getStudentLabel(g.studentUid)}
-                      </p>
-                      <p className="tp-announce-text">
-                        Class: {getClassById(g.classId)?.name || g.classId} • Score: {g.score}/{g.maxScore}
-                      </p>
-                      <span className="tp-announce-time">{safeDateLabel(g.createdAt)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <div className="tp-card">
+                <div className="tp-card-header">
+                  <div>
+                    <h3>Grade records</h3>
+                    <div style={{ color: "#6b7280", fontSize: 13, marginTop: 4 }}>
+                      {selectedClass
+                        ? `Showing ${selectedClass.name}`
+                        : "Select a class to see all grades recorded for that class."}
+                    </div>
+                  </div>
+                  <button
+                    className="tp-cta tp-cta-small"
+                    type="button"
+                    onClick={() => setModal("grade")}
+                    disabled={!selectedClassId}
+                    title={!selectedClassId ? "Select a class first" : ""}
+                  >
+                    + Add Grade
+                  </button>
+                </div>
+
+                {!selectedClassId ? (
+                  <div style={{ color: "#6b7280" }}>Select a class to see its grade records.</div>
+                ) : selectedClassGrades.length === 0 ? (
+                  <div style={{ color: "#6b7280" }}>
+                    No grades recorded yet in <b>{selectedClass?.name}</b>.
+                  </div>
+                ) : (
+                  <ul className="tp-announce-list" style={{ marginTop: 10 }}>
+                    {selectedClassGrades.map((g) => (
+                      <li key={g.id} className="tp-announce-item tp-announce-blue">
+                        <p className="tp-announce-title">
+                          {(g.examId ? getExamLabel(g.examId) : (g.label || "Grade"))} •{" "}
+                          {getStudentLabel(g.studentUid)}
+                        </p>
+                        <p className="tp-announce-text">
+                          Class: {getClassLabel(g.classId)} • Score: {g.score}/{g.maxScore}
+                        </p>
+                        <span className="tp-announce-time">{safeDateLabel(g.date || g.createdAt)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* ===== ATTENDANCE ===== */}
+          {activeTab === "attendance" && (
+            <section className="tp-middle-row">
+              <div className="tp-card">
+                <div className="tp-card-header">
+                  <h3>My Classes</h3>
+                </div>
+
+                {myClasses.length === 0 ? (
+                  <div style={{ color: "#6b7280" }}>No classes assigned to you yet.</div>
+                ) : (
+                  myClasses.map((cl) => {
+                    const isSelected = selectedClassId === cl.id;
+                    return (
+                      <div
+                        key={cl.id}
+                        className={`tp-class-card ${isSelected ? "tp-class-card-active" : ""}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedClassId(cl.id)}
+                        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setSelectedClassId(cl.id)}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <div>
+                          <p className="tp-class-name">{cl.name}</p>
+                          <p className="tp-class-sub">Code: {cl.code || "Not set"}</p>
+                          <p className="tp-class-time">{isSelected ? "Selected for attendance" : "Click to open register"}</p>
+                        </div>
+                        <span className={`tp-class-pill ${isSelected ? "tp-class-pill-active" : ""}`}>
+                          {isSelected ? "Active" : "Open"}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="tp-card">
+                <div className="tp-card-header">
+                  <h3>Attendance Register</h3>
+                  <button
+                    className="tp-cta tp-cta-small"
+                    type="button"
+                    onClick={() => openAttendanceModal()}
+                    disabled={!selectedClassId}
+                  >
+                    + Mark Attendance
+                  </button>
+                </div>
+
+                {!selectedClassId ? (
+                  <div style={{ color: "#6b7280" }}>Select a class to see its attendance register.</div>
+                ) : selectedClassStudents.length === 0 ? (
+                  <div style={{ color: "#6b7280" }}>
+                    No enrolled students yet in <b>{selectedClass?.name}</b>.
+                  </div>
+                ) : (
+                  <ul className="tp-announce-list" style={{ marginTop: 10 }}>
+                    {selectedClassStudents.map((student) => {
+                      const latest = latestAttendanceByStudent.get(student.id) || null;
+                      const latestStatus = latest ? String(latest.status || "").toLowerCase() : "";
+                      const cardClass =
+                        latestStatus === "present"
+                          ? "tp-announce-green"
+                          : latestStatus === "late" || latestStatus === "excused"
+                            ? "tp-announce-yellow"
+                            : latestStatus === "absent"
+                              ? "tp-announce-blue"
+                              : "tp-announce-blue";
+
+                      return (
+                        <li key={student.id} className={`tp-announce-item ${cardClass}`}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+                            <div>
+                              <p className="tp-announce-title">{student.fullName || "Unnamed student"}</p>
+                              <p className="tp-announce-text">
+                                {student.email || "No email"}
+                                {latest
+                                  ? ` • ${String(latest.status || "").replace(/^\w/, (char) => char.toUpperCase())} on ${safeDateLabel(latest.date || latest.createdAt)}`
+                                  : " • No attendance marked yet"}
+                              </p>
+                              {latest?.note ? (
+                                <span className="tp-announce-time">{latest.note}</span>
+                              ) : null}
+                            </div>
+
+                            <button
+                              className="tp-cta tp-cta-small"
+                              type="button"
+                              onClick={() => openAttendanceModal(student.id, selectedClassId)}
+                            >
+                              {latest ? "Update" : "Mark"}
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
             </section>
           )}
 
@@ -1414,7 +1730,7 @@ export default function TeacherPage() {
                     return (
                       <li key={s.id} className="tp-announce-item tp-announce-yellow">
                         <p className="tp-announce-title">
-                          {cls?.name || s.classId || "Class"} •{" "}
+                          {cls?.name || cls?.code || "Class"} •{" "}
                           {s.location || "No location set"}
                         </p>
                         <p className="tp-announce-text">
@@ -1448,7 +1764,7 @@ export default function TeacherPage() {
             }
             const rows = Object.entries(classAvgMap).map(([classId, { sum, count }]) => ({
               classId,
-              className: getClassById(classId)?.name || classId,
+              className: getClassLabel(classId),
               avg: count > 0 ? Math.round(sum / count) : null,
               count,
             }));
@@ -1520,7 +1836,7 @@ export default function TeacherPage() {
                     <li key={r.id} className="tp-announce-item tp-announce-blue">
                       <p className="tp-announce-title">{r.title}</p>
                       <p className="tp-announce-text">
-                        Class: {getClassById(r.classId)?.name || r.classId}
+                        Class: {getClassLabel(r.classId)}
                         {r.description ? ` • ${r.description}` : ""}
                       </p>
                       <a
@@ -1552,6 +1868,7 @@ export default function TeacherPage() {
                 <div className="tp-modal-title">
                   {modal === "exam" && "Add Exam"}
                   {modal === "grade" && "Grade Student"}
+                  {modal === "attendance" && "Mark Attendance"}
                   {modal === "schedule" && "Schedule Class"}
                   {modal === "resource" && "Add Resource"}
                 </div>
@@ -1649,6 +1966,9 @@ export default function TeacherPage() {
                     </div>
                   </div>
 
+                  <label>Grade Date</label>
+                  <input name="date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
+
                   <label>Label / Note (optional)</label>
                   <input name="label" placeholder="e.g. Quiz 2, Homework 1, Participation..." />
 
@@ -1662,6 +1982,112 @@ export default function TeacherPage() {
                   </div>
 
                   {!selectedClassId ? <div className="tp-modal-hint">Select a class to load enrolled students.</div> : null}
+                </form>
+              )}
+
+              {/* Mark Attendance */}
+              {modal === "attendance" && (
+                <form className="tp-modal-form" onSubmit={handleAddAttendance}>
+                  <label>Class</label>
+                  <select
+                    name="classId"
+                    required
+                    value={attendanceDraft.classId}
+                    onChange={(e) => {
+                      const nextClassId = e.target.value;
+                      setAttendanceDraft((prev) => ({
+                        ...prev,
+                        classId: nextClassId,
+                        studentUid: "",
+                      }));
+                      setSelectedClassId(nextClassId);
+                    }}
+                  >
+                    <option value="">Select class...</option>
+                    {myClasses.map((cl) => (
+                      <option key={cl.id} value={cl.id}>
+                        {cl.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="tp-field-row">
+                    <div>
+                      <label>Student</label>
+                      <select
+                        name="studentUid"
+                        required
+                        value={attendanceDraft.studentUid}
+                        onChange={(e) =>
+                          setAttendanceDraft((prev) => ({ ...prev, studentUid: e.target.value }))
+                        }
+                        disabled={!attendanceDraft.classId}
+                      >
+                        <option value="">Select student...</option>
+                        {selectedClassStudents.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.fullName || s.email}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label>Status</label>
+                      <select
+                        name="status"
+                        value={attendanceDraft.status}
+                        onChange={(e) =>
+                          setAttendanceDraft((prev) => ({ ...prev, status: e.target.value }))
+                        }
+                      >
+                        <option value="present">Present</option>
+                        <option value="late">Late</option>
+                        <option value="excused">Excused</option>
+                        <option value="absent">Absent</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="tp-field-row">
+                    <div>
+                      <label>Date</label>
+                      <input
+                        name="date"
+                        type="date"
+                        required
+                        value={attendanceDraft.date}
+                        onChange={(e) =>
+                          setAttendanceDraft((prev) => ({ ...prev, date: e.target.value }))
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label>Note (optional)</label>
+                      <input
+                        name="note"
+                        placeholder="Short note about attendance..."
+                        value={attendanceDraft.note}
+                        onChange={(e) =>
+                          setAttendanceDraft((prev) => ({ ...prev, note: e.target.value }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="tp-modal-actions">
+                    <button type="button" className="tp-modal-btn ghost" onClick={closeModal}>
+                      Cancel
+                    </button>
+                    <button className="tp-modal-btn" type="submit">
+                      Save Attendance
+                    </button>
+                  </div>
+
+                  {!attendanceDraft.classId ? (
+                    <div className="tp-modal-hint">Select a class to load students for attendance.</div>
+                  ) : null}
                 </form>
               )}
 

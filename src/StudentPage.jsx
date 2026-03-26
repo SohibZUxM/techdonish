@@ -17,14 +17,24 @@ const safePercent = (score, maxScore) => {
   return (sc / max) * 100;
 };
 
+const safeDateLabel = (value) => {
+  if (!value) return "—";
+  const date = value?.toDate ? value.toDate() : new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "—"
+    : date.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+};
+
 export default function StudentPage() {
   const navigate = useNavigate();
 
   // ✅ functional tabs
-  const [activeTab, setActiveTab] = useState("dashboard"); // dashboard|courses|classes|grades|schedule|resources
+  const [activeTab, setActiveTab] = useState("dashboard"); // dashboard|courses|classes|grades|attendance|schedule|resources
   const [showAllGrades, setShowAllGrades] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [selectedGradesClassId, setSelectedGradesClassId] = useState("");
+  const [selectedAttendanceClassId, setSelectedAttendanceClassId] = useState("");
 
   // auth + profile
   const [uid, setUid] = useState(null);
@@ -116,6 +126,12 @@ export default function StudentPage() {
     return m;
   }, [myCourses]);
 
+  const classesById = useMemo(() => {
+    const m = new Map();
+    myClasses.forEach((c) => m.set(c.id, c));
+    return m;
+  }, [myClasses]);
+
   const getCourseName = (courseId) => coursesById.get(courseId)?.name || "—";
 
   /** ========= grades (realtime) ========= */
@@ -127,13 +143,37 @@ export default function StudentPage() {
 
   const grades = useMemo(() => {
     return gradesRaw
-      .map((g) => ({ ...g, percent: safePercent(g.score, g.maxScore) }))
+      .map((g) => ({
+        ...g,
+        percent: safePercent(g.score, g.maxScore),
+        dateText: safeDateLabel(g.date || g.createdAt),
+      }))
       .sort((a, b) => {
-        const ta = a.createdAt?.toMillis?.() || 0;
-        const tb = b.createdAt?.toMillis?.() || 0;
+        const ta = a.date?.toMillis?.() || a.createdAt?.toMillis?.() || 0;
+        const tb = b.date?.toMillis?.() || b.createdAt?.toMillis?.() || 0;
         return tb - ta;
       });
   }, [gradesRaw]);
+
+  /** ========= attendance (realtime) ========= */
+  const attendanceRaw = useRealtimeList(
+    () => query(collection(db, "attendance"), where("studentUid", "==", uid)),
+    [uid],
+    !!uid
+  );
+
+  const attendanceRecords = useMemo(() => {
+    return [...attendanceRaw]
+      .map((item) => ({
+        ...item,
+        dateText: safeDateLabel(item.date || item.createdAt),
+      }))
+      .sort((a, b) => {
+        const ta = a.date?.toMillis?.() || a.createdAt?.toMillis?.() || 0;
+        const tb = b.date?.toMillis?.() || b.createdAt?.toMillis?.() || 0;
+        return tb - ta;
+      });
+  }, [attendanceRaw]);
 
   const examCount = grades.length;
 
@@ -201,6 +241,16 @@ export default function StudentPage() {
     };
   }, [myCourses.length, myClasses.length, examCount, avgPercent]);
 
+  const filteredGrades = useMemo(() => {
+    if (!selectedGradesClassId) return grades;
+    return grades.filter((item) => item.classId === selectedGradesClassId);
+  }, [grades, selectedGradesClassId]);
+
+  const filteredAttendance = useMemo(() => {
+    if (!selectedAttendanceClassId) return attendanceRecords;
+    return attendanceRecords.filter((item) => item.classId === selectedAttendanceClassId);
+  }, [attendanceRecords, selectedAttendanceClassId]);
+
   const pageTitle =
     activeTab === "dashboard"
       ? "Dashboard"
@@ -210,9 +260,20 @@ export default function StudentPage() {
           ? "My Classes"
           : activeTab === "grades"
             ? "Grades"
+            : activeTab === "attendance"
+              ? "Attendance"
             : activeTab === "schedule"
               ? "Schedule"
               : "Resources";
+  const studentTabs = [
+    { id: "dashboard", label: "Dashboard" },
+    { id: "courses", label: "My Courses" },
+    { id: "classes", label: "My Classes" },
+    { id: "grades", label: "Grades" },
+    { id: "attendance", label: "Attendance" },
+    { id: "schedule", label: "Schedule" },
+    { id: "resources", label: "Resources" },
+  ];
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -326,6 +387,24 @@ export default function StudentPage() {
         </div>
       </header>
 
+      <div className="sp-mobile-nav" aria-label="Student portal navigation">
+        <label htmlFor="sp-mobile-tab-select" className="sp-mobile-nav-label">
+          Section
+        </label>
+        <select
+          id="sp-mobile-tab-select"
+          className="sp-mobile-nav-select"
+          value={activeTab}
+          onChange={(e) => setActiveTab(e.target.value)}
+        >
+          {studentTabs.map((tab) => (
+            <option key={tab.id} value={tab.id}>
+              {tab.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* ================= SIDEBAR ================= */}
       <aside className="sp-sidebar">
         <div className="sp-nav-wrapper">
@@ -362,7 +441,14 @@ export default function StudentPage() {
               📊 Grades
             </button>
 
-            {/* not wired yet */}
+            <button
+              type="button"
+              className={`sp-nav-item ${activeTab === "attendance" ? "active" : ""}`}
+              onClick={() => setActiveTab("attendance")}
+            >
+              ✅ Attendance
+            </button>
+
             <button
               type="button"
               className={`sp-nav-item ${activeTab === "schedule" ? "active" : ""}`}
@@ -404,6 +490,7 @@ export default function StudentPage() {
               {activeTab === "courses" && "Courses you are enrolled in (derived from your classes)."}
               {activeTab === "classes" && "Your enrolled classes with course + teacher information."}
               {activeTab === "grades" && "Your grades updated in real-time."}
+              {activeTab === "attendance" && "Your attendance records updated in real-time."}
               {activeTab === "schedule" && "Upcoming class sessions created by your teachers."}
               {activeTab === "resources" && "Learning resources shared for your enrolled classes."}
             </p>
@@ -646,6 +733,37 @@ export default function StudentPage() {
 
               <div className="sp-section-divider"></div>
 
+              <div className="sp-class-filter-group">
+                <button
+                  type="button"
+                  className={`sp-class-filter ${selectedGradesClassId === "" ? "active" : ""}`}
+                  onClick={() => setSelectedGradesClassId("")}
+                >
+                  <strong>All classes</strong>
+                  <span>View every recorded grade</span>
+                </button>
+                {myClasses.map((cl) => (
+                  <button
+                    key={cl.id}
+                    type="button"
+                    className={`sp-class-filter ${selectedGradesClassId === cl.id ? "active" : ""}`}
+                    onClick={() => setSelectedGradesClassId(cl.id)}
+                  >
+                    <strong>{cl.name}</strong>
+                    <span>{getCourseName(cl.courseId)} • {cl.teacherName || "Not assigned"}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="sp-subsection-head">
+                <h3>Grade records</h3>
+                <span className="sp-subsection-meta">
+                  {selectedGradesClassId
+                    ? `Showing ${classesById.get(selectedGradesClassId)?.name || "selected class"}`
+                    : "Showing all classes"}
+                </span>
+              </div>
+
               <div
                 style={{
                   display: "flex",
@@ -665,9 +783,11 @@ export default function StudentPage() {
 
               {grades.length === 0 ? (
                 <p className="sp-muted">No grades recorded yet.</p>
+              ) : filteredGrades.length === 0 ? (
+                <p className="sp-muted">No grades recorded yet for this class.</p>
               ) : (
-                (showAllGrades ? grades : grades.slice(0, 8)).map((g) => {
-                  const cls = myClasses.find((c) => c.id === g.classId);
+                (showAllGrades ? filteredGrades : filteredGrades.slice(0, 8)).map((g) => {
+                  const cls = classesById.get(g.classId);
                   return (
                     <div key={g.id} className="sp-grade-item border-blue">
                       <div className="sp-grade-left">
@@ -675,7 +795,7 @@ export default function StudentPage() {
                         <div>
                           <h3>{g.label || "Grade"}</h3>
                           <p>
-                            Class: {cls?.name || g.classId || "—"} • Course:{" "}
+                            Class: {cls?.name || cls?.code || "Class"} • Course:{" "}
                             {getCourseName(cls?.courseId)}
                           </p>
                         </div>
@@ -685,9 +805,90 @@ export default function StudentPage() {
                         <span className={`sp-grade-letter ${gradeColorClass(g.percent)}`}>
                           {typeof g.percent === "number" ? `${Math.round(g.percent)}%` : "—"}
                         </span>
-                        <span className="sp-grade-score">
-                          {g.score}/{g.maxScore || 100}
-                        </span>
+                        <span className="sp-grade-score">{g.score}/{g.maxScore || 100}</span>
+                        <span className="sp-grade-score">{g.dateText}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+
+          {/* ================= ATTENDANCE VIEW ================= */}
+          {activeTab === "attendance" && (
+            <div className="sp-box">
+              <div className="sp-box-header">
+                <h2>Attendance</h2>
+              </div>
+              <div className="sp-section-divider"></div>
+
+              <div className="sp-class-filter-group">
+                <button
+                  type="button"
+                  className={`sp-class-filter ${selectedAttendanceClassId === "" ? "active" : ""}`}
+                  onClick={() => setSelectedAttendanceClassId("")}
+                >
+                  <strong>All classes</strong>
+                  <span>View attendance from every enrolled class</span>
+                </button>
+                {myClasses.map((cl) => (
+                  <button
+                    key={cl.id}
+                    type="button"
+                    className={`sp-class-filter ${selectedAttendanceClassId === cl.id ? "active" : ""}`}
+                    onClick={() => setSelectedAttendanceClassId(cl.id)}
+                  >
+                    <strong>{cl.name}</strong>
+                    <span>{getCourseName(cl.courseId)} • {cl.teacherName || "Not assigned"}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="sp-subsection-head">
+                <h3>Attendance records</h3>
+                <span className="sp-subsection-meta">
+                  {selectedAttendanceClassId
+                    ? `Showing ${classesById.get(selectedAttendanceClassId)?.name || "selected class"}`
+                    : "Showing all classes"}
+                </span>
+              </div>
+
+              {attendanceRecords.length === 0 ? (
+                <p className="sp-muted">No attendance records yet.</p>
+              ) : filteredAttendance.length === 0 ? (
+                <p className="sp-muted">No attendance records yet for this class.</p>
+              ) : (
+                filteredAttendance.map((item) => {
+                  const cls = classesById.get(item.classId);
+                  const status = String(item.status || "").toLowerCase();
+                  const borderClass =
+                    status === "present"
+                      ? "border-green"
+                      : status === "late" || status === "excused"
+                        ? "border-orange"
+                        : "border-purple";
+                  const iconClass =
+                    status === "present"
+                      ? "bg-green"
+                      : status === "late" || status === "excused"
+                        ? "bg-orange"
+                        : "bg-purple";
+
+                  return (
+                    <div key={item.id} className={`sp-grade-item ${borderClass}`}>
+                      <div className="sp-grade-left">
+                        <div className={`sp-grade-icon ${iconClass}`}>✅</div>
+                        <div>
+                          <h3>{String(item.status || "Recorded").replace(/^\w/, (char) => char.toUpperCase())}</h3>
+                          <p>
+                            Class: {cls?.name || cls?.code || "Class"} • Course: {getCourseName(cls?.courseId)}
+                          </p>
+                          {item.note ? <p>{item.note}</p> : null}
+                        </div>
+                      </div>
+                      <div className="sp-grade-right">
+                        <span className="sp-grade-score">{item.dateText}</span>
                       </div>
                     </div>
                   );
@@ -722,7 +923,7 @@ export default function StudentPage() {
                       <div className="sp-grade-left">
                         <div className="sp-grade-icon bg-blue">📅</div>
                         <div>
-                          <h3>{cls?.name || s.classId || "Class"}</h3>
+                          <h3>{cls?.name || cls?.code || "Class"}</h3>
                           <p>
                             {fmt(startDate)}
                             {endDate ? ` → ${fmt(endDate)}` : ""}
@@ -759,7 +960,7 @@ export default function StudentPage() {
                         <div>
                           <h3>{r.title}</h3>
                           <p>
-                            Class: {cls?.name || r.classId || "—"}
+                            Class: {cls?.name || cls?.code || "Class"}
                             {r.description ? ` • ${r.description}` : ""}
                           </p>
                           <a

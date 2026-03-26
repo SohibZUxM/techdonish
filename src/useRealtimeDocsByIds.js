@@ -15,7 +15,7 @@ const chunk = (arr, size) => {
  * Returns an array of docs: [{ id, ...data }]
  */
 export default function useRealtimeDocsByIds(collectionName, ids, enabled = true) {
-  const [state, setState] = useState({ key: "", map: {} });
+  const [state, setState] = useState({ key: "", chunks: {} });
 
   const stableIds = useMemo(() => {
     const clean = (Array.isArray(ids) ? ids : []).filter(Boolean).map(String);
@@ -35,6 +35,7 @@ export default function useRealtimeDocsByIds(collectionName, ids, enabled = true
     const colRef = collection(db, collectionName);
 
     const unsubs = idChunks.map((ids10) => {
+      const chunkKey = ids10.join("|");
       const q = query(colRef, where(documentId(), "in", ids10));
       return onSnapshot(
         q,
@@ -45,9 +46,9 @@ export default function useRealtimeDocsByIds(collectionName, ids, enabled = true
           });
           setState((prev) => ({
             key: stateKey,
-            map: {
-              ...(prev.key === stateKey ? prev.map : {}),
-              ...next,
+            chunks: {
+              ...(prev.key === stateKey ? prev.chunks : {}),
+              [chunkKey]: next,
             },
           }));
         },
@@ -63,7 +64,7 @@ export default function useRealtimeDocsByIds(collectionName, ids, enabled = true
       return [];
     }
 
-    return Object.values(state.map);
+    return Object.values(state.chunks).flatMap((chunkMap) => Object.values(chunkMap));
   }, [enabled, idsKey, state, stateKey]);
 }
 

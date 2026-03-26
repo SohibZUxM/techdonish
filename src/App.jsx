@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from "react";
+import React, { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import "./App.css";
 import {
   BrowserRouter as Router,
@@ -35,6 +35,77 @@ function RouteLoading() {
 
 function Home() {
   const navigate = useNavigate();
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  useEffect(() => {
+    const standaloneMatch = window.matchMedia("(display-mode: standalone)");
+
+    const updateInstalledState = () => {
+      setIsInstalled(
+        standaloneMatch.matches || window.navigator.standalone === true
+      );
+    };
+
+    const handleBeforeInstallPrompt = (event) => {
+      event.preventDefault();
+      setInstallPrompt(event);
+    };
+
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setInstallPrompt(null);
+    };
+
+    updateInstalledState();
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
+    standaloneMatch.addEventListener("change", updateInstalledState);
+
+    return () => {
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleBeforeInstallPrompt
+      );
+      window.removeEventListener("appinstalled", handleAppInstalled);
+      standaloneMatch.removeEventListener("change", updateInstalledState);
+    };
+  }, []);
+
+  const installButtonLabel = useMemo(() => {
+    if (isInstalled) {
+      return "App Installed";
+    }
+
+    return "Install App";
+  }, [isInstalled]);
+
+  const handleInstallClick = async () => {
+    if (isInstalled) {
+      return;
+    }
+
+    if (installPrompt) {
+      installPrompt.prompt();
+      await installPrompt.userChoice;
+      setInstallPrompt(null);
+
+      return;
+    }
+
+    const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+
+    if (isIos) {
+      window.alert(
+        "To install Hamsafar on iPhone, tap Share in Safari and choose 'Add to Home Screen'."
+      );
+      return;
+    }
+
+    window.alert(
+      "To install Hamsafar, open your browser menu and choose 'Install app' or 'Add to Home screen'."
+    );
+  };
 
   return (
     <div className="page">
@@ -43,8 +114,11 @@ function Home() {
         <div className="container nav">
           <div className="brand">
             <div className="brand-icon">
-              {/* simple mortarboard icon */}
-              <span className="brand-icon-cap">🎓</span>
+              <img
+                src="/hamsafar-logo.svg"
+                alt="Hamsafar logo"
+                className="brand-icon-image"
+              />
             </div>
             <div className="brand-text">
               <div className="brand-title">Hamsafar</div>
@@ -67,10 +141,24 @@ function Home() {
             </a>
           </nav>
 
-          <button className="btn btn-primary nav-cta" onClick={() => {
-            const el = document.getElementById("access-portal");
-            el?.scrollIntoView({behavior: "smooth"});
-          }}>Get Started</button>
+          <div className="nav-actions">
+            <button
+              className="btn nav-install"
+              onClick={handleInstallClick}
+              disabled={isInstalled}
+            >
+              {installButtonLabel}
+            </button>
+            <button
+              className="btn btn-primary nav-cta"
+              onClick={() => {
+                const el = document.getElementById("access-portal");
+                el?.scrollIntoView({ behavior: "smooth" });
+              }}
+            >
+              Get Started
+            </button>
+          </div>
         </div>
       </header>
 
@@ -89,6 +177,13 @@ function Home() {
                 educational journey.
               </p>
               <div className="hero-actions">
+                <button
+                  className="btn btn-outline"
+                  onClick={handleInstallClick}
+                  disabled={isInstalled}
+                >
+                  {installButtonLabel}
+                </button>
                 <button className="btn btn-accent">Explore Programs</button>
                 <button className="btn btn-outline">Learn More</button>
               </div>
@@ -263,7 +358,11 @@ function Home() {
           <div className="footer-brand">
             <div className="brand">
               <div className="brand-icon footer-brand-icon">
-                <span className="brand-icon-cap">🎓</span>
+                <img
+                  src="/hamsafar-logo.svg"
+                  alt="Hamsafar logo"
+                  className="brand-icon-image"
+                />
               </div>
               <div className="brand-text">
                 <div className="brand-title footer-brand-title">Hamsafar</div>
