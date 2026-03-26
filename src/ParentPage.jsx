@@ -19,6 +19,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import useRealtimeDocsByIds from "./useRealtimeDocsByIds";
 import useRealtimeWhereIn from "./useRealtimeWhereIn";
+import PortalMobileTabs from "./PortalMobileTabs";
 
 const pageMeta = {
   dashboard: {
@@ -677,22 +678,13 @@ export default function ParentPage() {
           </div>
         </header>
 
-        <div className="pp-mobile-nav" aria-label="Parent portal navigation">
-          <label htmlFor="pp-mobile-tab-select" className="pp-mobile-nav-label">
-            Section
-          </label>
-          <select
-            id="pp-mobile-tab-select"
-            className="pp-mobile-nav-select"
-            value={activeTab}
-            onChange={(e) => setActiveTab(e.target.value)}
-          >
-            {navItems.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-              </option>
-            ))}
-          </select>
+        <div className="pp-mobile-nav">
+          <PortalMobileTabs
+            items={navItems}
+            activeTab={activeTab}
+            ariaLabel="Parent portal navigation"
+            onChange={setActiveTab}
+          />
         </div>
 
         <div className="pp-content">

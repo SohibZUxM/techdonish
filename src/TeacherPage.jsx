@@ -16,6 +16,7 @@ import {
   FiBell,
   FiFolder,
 } from "react-icons/fi";
+import PortalMobileTabs from "./PortalMobileTabs";
 
 import { auth, db, storage } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -1253,25 +1254,16 @@ export default function TeacherPage() {
           </div>
         </header>
 
-        <div className="tp-mobile-nav" aria-label="Teacher portal navigation">
-          <label htmlFor="tp-mobile-tab-select" className="tp-mobile-nav-label">
-            Section
-          </label>
-          <select
-            id="tp-mobile-tab-select"
-            className="tp-mobile-nav-select"
-            value={activeTab}
-            onChange={(e) => {
+        <div className="tp-mobile-nav">
+          <PortalMobileTabs
+            items={teacherTabs}
+            activeTab={activeTab}
+            ariaLabel="Teacher portal navigation"
+            onChange={(nextTab) => {
               setModal(null);
-              setActiveTab(e.target.value);
+              setActiveTab(nextTab);
             }}
-          >
-            {teacherTabs.map((tab) => (
-              <option key={tab.id} value={tab.id}>
-                {tab.label}
-              </option>
-            ))}
-          </select>
+          />
         </div>
 
         <main className="tp-content">

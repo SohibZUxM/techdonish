@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import useRealtimeList from "./useRealtimeList";
 import useRealtimeDocsByIds from "./useRealtimeDocsByIds";
 import useRealtimeWhereIn from "./useRealtimeWhereIn";
+import PortalMobileTabs from "./PortalMobileTabs";
 
 /** ========= helpers ========= */
 const safePercent = (score, maxScore) => {
@@ -387,22 +388,13 @@ export default function StudentPage() {
         </div>
       </header>
 
-      <div className="sp-mobile-nav" aria-label="Student portal navigation">
-        <label htmlFor="sp-mobile-tab-select" className="sp-mobile-nav-label">
-          Section
-        </label>
-        <select
-          id="sp-mobile-tab-select"
-          className="sp-mobile-nav-select"
-          value={activeTab}
-          onChange={(e) => setActiveTab(e.target.value)}
-        >
-          {studentTabs.map((tab) => (
-            <option key={tab.id} value={tab.id}>
-              {tab.label}
-            </option>
-          ))}
-        </select>
+      <div className="sp-mobile-nav">
+        <PortalMobileTabs
+          items={studentTabs}
+          activeTab={activeTab}
+          ariaLabel="Student portal navigation"
+          onChange={setActiveTab}
+        />
       </div>
 
       {/* ================= SIDEBAR ================= */}

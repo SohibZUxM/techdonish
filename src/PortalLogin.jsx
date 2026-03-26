@@ -245,7 +245,13 @@ export default function PortalLogin() {
         <div className="portal-role-pill">{roleLabel}</div>
 
         <div className="portal-login-logo">
-          <div className="portal-logo-badge">H</div>
+          <div className="portal-logo-badge">
+            <img
+              src="/hamsafar-logo.svg"
+              alt="Hamsafar logo"
+              className="portal-logo-image"
+            />
+          </div>
         </div>
 
         <h2 className="portal-app-name">Hamsafar</h2>

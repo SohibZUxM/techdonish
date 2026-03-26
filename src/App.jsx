@@ -108,7 +108,7 @@ function Home() {
   };
 
   return (
-    <div className="page">
+    <div className="page" id="top">
       {/* ---------- HEADER ---------- */}
       <header className="header">
         <div className="container nav">
@@ -127,16 +127,16 @@ function Home() {
           </div>
 
           <nav className="nav-links">
-            <a href="#" className="nav-link">
+            <a href="#top" className="nav-link">
               Home
             </a>
-            <a href="#" className="nav-link">
+            <a href="#why-choose" className="nav-link">
               About
             </a>
-            <a href="#" className="nav-link">
+            <a href="#access-portal" className="nav-link">
               Programs
             </a> 
-            <a href="#" className="nav-link">
+            <a href="#footer" className="nav-link">
               Contact
             </a>
           </nav>
@@ -184,8 +184,24 @@ function Home() {
                 >
                   {installButtonLabel}
                 </button>
-                <button className="btn btn-accent">Explore Programs</button>
-                <button className="btn btn-outline">Learn More</button>
+                <button
+                  className="btn btn-accent"
+                  onClick={() => {
+                    const el = document.getElementById("access-portal");
+                    el?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                >
+                  Explore Programs
+                </button>
+                <button
+                  className="btn btn-outline"
+                  onClick={() => {
+                    const el = document.getElementById("why-choose");
+                    el?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                >
+                  Learn More
+                </button>
               </div>
             </div>
 
@@ -288,7 +304,7 @@ function Home() {
         </section>
 
         {/* ---------- WHY CHOOSE ---------- */}
-        <section className="section section-why">
+        <section id="why-choose" className="section section-why">
           <div className="container">
             <div className="section-heading">
               <h2>Why Choose Hamsafar?</h2>
@@ -353,7 +369,7 @@ function Home() {
       </main>
 
       {/* ---------- FOOTER ---------- */}
-      <footer className="footer">
+      <footer id="footer" className="footer">
         <div className="container footer-inner">
           <div className="footer-brand">
             <div className="brand">

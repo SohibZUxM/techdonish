@@ -7,6 +7,7 @@ import {
   Bell,Settings,LayoutDashboard,BookOpen,ClipboardList,GraduationCap,Users,
   UserRound,UserRoundCog,School,Plus,Monitor,X,LogOut,
 } from "lucide-react";
+import PortalMobileTabs from "./PortalMobileTabs";
 
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { db, auth } from "./firebase";
@@ -691,22 +692,13 @@ export default function AdminPage() {
           </div>
         </header>
 
-        <div className="ap-mobile-nav" aria-label="Admin portal navigation">
-          <label htmlFor="ap-mobile-tab-select" className="ap-mobile-nav-label">
-            Section
-          </label>
-          <select
-            id="ap-mobile-tab-select"
-            className="ap-mobile-nav-select"
-            value={activeTab}
-            onChange={(e) => setActiveTab(e.target.value)}
-          >
-            {adminTabs.map((tab) => (
-              <option key={tab.id} value={tab.id}>
-                {tab.label}
-              </option>
-            ))}
-          </select>
+        <div className="ap-mobile-nav">
+          <PortalMobileTabs
+            items={adminTabs}
+            activeTab={activeTab}
+            ariaLabel="Admin portal navigation"
+            onChange={setActiveTab}
+          />
         </div>
 
         <div className="ap-content">
