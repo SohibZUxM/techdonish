@@ -1,6 +1,6 @@
-# Hamsafar Mobile
+# TechDonish
 
-Native mobile rebuild of Hamsafar using Expo and React Native.
+Native mobile app for TechDonish, built with Expo and React Native.
 
 ## Setup
 
