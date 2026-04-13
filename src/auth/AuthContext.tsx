@@ -26,7 +26,7 @@ import {
   where,
 } from "firebase/firestore";
 import * as Haptics from "expo-haptics";
-import { applyDemoBypass } from "../lib/demoBypass";
+import { applyDemoBypass, isDemoAccountEmail } from "../lib/demoBypass";
 import { auth, db } from "../lib/firebase";
 import type { Role, UserProfile } from "../types";
 
@@ -205,21 +205,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           password
         );
 
-        await setDoc(doc(db, "users", userCred.user.uid), {
-          email: normalizedEmail,
-          fullName: fullName.trim(),
-          requestedRole: role,
-          role: "pending",
-          status: "pending",
-          createdAt: serverTimestamp(),
-        });
+        if (!isDemoAccountEmail(normalizedEmail)) {
+          await setDoc(doc(db, "users", userCred.user.uid), {
+            email: normalizedEmail,
+            fullName: fullName.trim(),
+            requestedRole: role,
+            role: "pending",
+            status: "pending",
+            createdAt: serverTimestamp(),
+          });
+        }
       } else {
-        const userCred = await signInWithEmailAndPassword(
-          auth,
-          normalizedEmail,
-          password
-        );
-        await ensureUserDocExists(userCred.user.uid, normalizedEmail, role);
+        let userCred;
+        try {
+          userCred = await signInWithEmailAndPassword(
+            auth,
+            normalizedEmail,
+            password
+          );
+        } catch (err: unknown) {
+          const code =
+            typeof err === "object" && err && "code" in err
+              ? String((err as { code?: string }).code)
+              : "";
+          if (
+            isDemoAccountEmail(normalizedEmail) &&
+            code === "auth/user-not-found"
+          ) {
+            userCred = await createUserWithEmailAndPassword(
+              auth,
+              normalizedEmail,
+              password
+            );
+          } else {
+            throw err;
+          }
+        }
+
+        if (!isDemoAccountEmail(normalizedEmail)) {
+          await ensureUserDocExists(userCred.user.uid, normalizedEmail, role);
+        }
       }
 
       await Haptics.notificationAsync(
