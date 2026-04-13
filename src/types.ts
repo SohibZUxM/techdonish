@@ -11,6 +11,12 @@ export type UserProfile = {
   childStudentIds?: string[];
 };
 
+/** Minimal user identity for Firestore queries and UI (Firebase Auth or local demo). */
+export type AuthSessionUser = {
+  uid: string;
+  email: string | null;
+};
+
 export type RootStackParamList = {
   Welcome: undefined;
   RoleAuth: { role: Role };

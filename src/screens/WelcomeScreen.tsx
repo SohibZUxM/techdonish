@@ -83,9 +83,8 @@ export function WelcomeScreen({ navigation }: Props) {
           Empowering <Text style={styles.accent}>Education</Text> for Tomorrow
         </Text>
         <Text style={styles.heroBody}>
-          TechDonish brings students, teachers, parents, and administrators into
-          one connected mobile experience with realtime academic data and
-          role-based tools.
+          TechDonish brings students, teachers, and parents into one connected
+          mobile experience with realtime academic data and role-based tools.
         </Text>
         <View style={styles.actionRow}>
           <PrimaryButton label="Explore Portals" onPress={handleExplorePortals} />
@@ -136,7 +135,7 @@ export function WelcomeScreen({ navigation }: Props) {
           <FeatureTile
             icon="🛡️"
             title="Secure"
-            body="Role-gated access keeps student, teacher, parent, and admin data separated."
+            body="Role-gated access keeps student, teacher, and parent data separated."
           />
           <FeatureTile
             icon="🎧"

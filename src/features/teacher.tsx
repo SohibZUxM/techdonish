@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { Linking, StyleSheet, Text, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
-import { signOut } from "firebase/auth";
 import {
   addDoc,
   collection,
@@ -22,7 +21,7 @@ import {
   FormInput,
   EmptyState,
 } from "../components/ui";
-import { auth, db, storage } from "../lib/firebase";
+import { db, storage } from "../lib/firebase";
 import {
   useRealtimeDocsByIds,
   useRealtimeWhereIn,
@@ -192,7 +191,7 @@ export function TeacherClassesScreen() {
       {data.classes.length === 0 ? (
         <EmptyState
           title="No classes assigned"
-          body="Ask an administrator to assign you to classes."
+          body="Ask your school to assign you to classes."
         />
       ) : (
         data.classes.map((cls) => {
@@ -299,6 +298,7 @@ export function TeacherScheduleScreen() {
 }
 
 export function TeacherActionsScreen() {
+  const { signOutUser } = useAuth();
   const data = useTeacherData();
   const [examClassId, setExamClassId] = useState<string | null>(null);
   const [examTitle, setExamTitle] = useState("");
@@ -518,7 +518,7 @@ export function TeacherActionsScreen() {
       <PrimaryButton
         label="Sign out"
         variant="danger"
-        onPress={() => signOut(auth)}
+        onPress={() => signOutUser()}
       />
     </Screen>
   );

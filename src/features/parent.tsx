@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { signOut } from "firebase/auth";
 import { useAuth } from "../auth/AuthContext";
 import {
   EmptyState,
@@ -12,7 +11,6 @@ import {
   SectionTitle,
   SurfaceCard,
 } from "../components/ui";
-import { auth } from "../lib/firebase";
 import {
   useRealtimeDocsByIds,
   useRealtimeWhereIn,
@@ -320,7 +318,7 @@ export function ParentUpdatesScreen() {
 }
 
 export function ParentProfileScreen() {
-  const { profile } = useAuth();
+  const { profile, signOutUser } = useAuth();
 
   return (
     <Screen>
@@ -335,7 +333,7 @@ export function ParentProfileScreen() {
       <PrimaryButton
         label="Sign out"
         variant="danger"
-        onPress={() => signOut(auth)}
+        onPress={() => signOutUser()}
       />
     </Screen>
   );

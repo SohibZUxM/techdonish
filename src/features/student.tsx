@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { Linking, StyleSheet, Text, View } from "react-native";
-import { signOut } from "firebase/auth";
 import { collection, query, where } from "firebase/firestore";
 import { useAuth } from "../auth/AuthContext";
 import {
@@ -13,7 +12,7 @@ import {
   SectionTitle,
   SurfaceCard,
 } from "../components/ui";
-import { auth, db } from "../lib/firebase";
+import { db } from "../lib/firebase";
 import {
   useRealtimeDocsByIds,
   useRealtimeList,
@@ -286,7 +285,7 @@ export function StudentResourcesScreen() {
 }
 
 export function StudentProfileScreen() {
-  const { profile } = useAuth();
+  const { profile, signOutUser } = useAuth();
   const data = useStudentData();
 
   return (
@@ -319,7 +318,7 @@ export function StudentProfileScreen() {
       <PrimaryButton
         label="Sign out"
         variant="danger"
-        onPress={() => signOut(auth)}
+        onPress={() => signOutUser()}
       />
     </Screen>
   );

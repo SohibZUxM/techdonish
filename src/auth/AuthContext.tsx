@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -26,13 +27,18 @@ import {
   where,
 } from "firebase/firestore";
 import * as Haptics from "expo-haptics";
-import { applyDemoBypass, isDemoAccountEmail } from "../lib/demoBypass";
+import {
+  assertDemoLocalLogin,
+  demoSessionToProfile,
+  isDemoAccountEmail,
+  type DemoSession,
+} from "../lib/demoLocalAuth";
 import { auth, db } from "../lib/firebase";
-import type { Role, UserProfile } from "../types";
+import type { AuthSessionUser, Role, UserProfile } from "../types";
 
 type AuthContextValue = {
   initializing: boolean;
-  user: User | null;
+  user: AuthSessionUser | null;
   profile: UserProfile | null;
   refreshProfile: () => Promise<void>;
   authenticateForRole: (params: {
@@ -129,10 +135,25 @@ export async function ensureUserDocExists(
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [initializing, setInitializing] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
+  const [demoSession, setDemoSession] = useState<DemoSession | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
+  const user = useMemo<AuthSessionUser | null>(() => {
+    if (demoSession) {
+      return { uid: demoSession.uid, email: demoSession.email };
+    }
+    if (firebaseUser) {
+      return { uid: firebaseUser.uid, email: firebaseUser.email };
+    }
+    return null;
+  }, [demoSession, firebaseUser]);
+
   const refreshProfile = useCallback(async () => {
+    if (demoSession) {
+      setProfile(demoSessionToProfile(demoSession));
+      return;
+    }
     if (!auth.currentUser) {
       setProfile(null);
       return;
@@ -140,17 +161,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const u = auth.currentUser;
     const snap = await getDoc(doc(db, "users", u.uid));
-    const raw = snap.exists()
-      ? ({ id: snap.id, ...(snap.data() as Omit<UserProfile, "id">) } as UserProfile)
-      : null;
-    setProfile(applyDemoBypass(u.uid, u.email, raw));
-  }, []);
+    if (snap.exists()) {
+      setProfile({
+        id: snap.id,
+        ...(snap.data() as Omit<UserProfile, "id">),
+      });
+    } else {
+      setProfile(null);
+    }
+  }, [demoSession]);
 
   useEffect(() => {
+    if (demoSession) {
+      setProfile(demoSessionToProfile(demoSession));
+      setInitializing(false);
+      return;
+    }
+
     let unsubProfile: (() => void) | undefined;
 
-    const unsubAuth = onAuthStateChanged(auth, async (nextUser) => {
-      setUser(nextUser);
+    const unsubAuth = onAuthStateChanged(auth, (nextUser) => {
+      setFirebaseUser(nextUser);
+      unsubProfile?.();
 
       if (!nextUser) {
         setProfile(null);
@@ -161,18 +193,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubProfile = onSnapshot(
         doc(db, "users", nextUser.uid),
         (snap) => {
-          const raw = snap.exists()
-            ? ({ id: snap.id, ...(snap.data() as Omit<UserProfile, "id">) } as UserProfile)
-            : null;
-          setProfile(applyDemoBypass(nextUser.uid, nextUser.email, raw));
+          setProfile(
+            snap.exists()
+              ? ({ id: snap.id, ...(snap.data() as Omit<UserProfile, "id">) } as UserProfile)
+              : null
+          );
           setInitializing(false);
         },
         (error) => {
           console.error("Auth profile listener failed:", error);
-          // Demo accounts still work if Firestore rules block reads/writes.
-          setProfile(
-            applyDemoBypass(nextUser.uid, nextUser.email, null)
-          );
+          setProfile(null);
           setInitializing(false);
         }
       );
@@ -182,7 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubAuth();
       unsubProfile?.();
     };
-  }, []);
+  }, [demoSession]);
 
   const authenticateForRole = useCallback<
     AuthContextValue["authenticateForRole"]
@@ -194,6 +224,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      if (isDemoAccountEmail(normalizedEmail)) {
+        const session = assertDemoLocalLogin(normalizedEmail, password);
+        await signOut(auth);
+        setFirebaseUser(null);
+        setDemoSession(session);
+        setProfile(demoSessionToProfile(session));
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success
+        );
+        return;
+      }
+
       if (mode === "signup") {
         if (!fullName?.trim()) {
           throw new Error("Please enter your full name.");
@@ -205,46 +247,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           password
         );
 
-        if (!isDemoAccountEmail(normalizedEmail)) {
-          await setDoc(doc(db, "users", userCred.user.uid), {
-            email: normalizedEmail,
-            fullName: fullName.trim(),
-            requestedRole: role,
-            role: "pending",
-            status: "pending",
-            createdAt: serverTimestamp(),
-          });
-        }
+        await setDoc(doc(db, "users", userCred.user.uid), {
+          email: normalizedEmail,
+          fullName: fullName.trim(),
+          requestedRole: role,
+          role: "pending",
+          status: "pending",
+          createdAt: serverTimestamp(),
+        });
       } else {
-        let userCred;
-        try {
-          userCred = await signInWithEmailAndPassword(
-            auth,
-            normalizedEmail,
-            password
-          );
-        } catch (err: unknown) {
-          const code =
-            typeof err === "object" && err && "code" in err
-              ? String((err as { code?: string }).code)
-              : "";
-          if (
-            isDemoAccountEmail(normalizedEmail) &&
-            code === "auth/user-not-found"
-          ) {
-            userCred = await createUserWithEmailAndPassword(
-              auth,
-              normalizedEmail,
-              password
-            );
-          } else {
-            throw err;
-          }
-        }
-
-        if (!isDemoAccountEmail(normalizedEmail)) {
-          await ensureUserDocExists(userCred.user.uid, normalizedEmail, role);
-        }
+        const userCred = await signInWithEmailAndPassword(
+          auth,
+          normalizedEmail,
+          password
+        );
+        await ensureUserDocExists(userCred.user.uid, normalizedEmail, role);
       }
 
       await Haptics.notificationAsync(
@@ -259,6 +276,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOutUser = useCallback(async () => {
+    setDemoSession(null);
     await signOut(auth);
   }, []);
 
