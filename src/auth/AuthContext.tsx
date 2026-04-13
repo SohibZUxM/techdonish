@@ -26,6 +26,7 @@ import {
   where,
 } from "firebase/firestore";
 import * as Haptics from "expo-haptics";
+import { applyDemoBypass } from "../lib/demoBypass";
 import { auth, db } from "../lib/firebase";
 import type { Role, UserProfile } from "../types";
 
@@ -137,15 +138,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const snap = await getDoc(doc(db, "users", auth.currentUser.uid));
-    if (snap.exists()) {
-      setProfile({
-        id: snap.id,
-        ...(snap.data() as Omit<UserProfile, "id">),
-      });
-    } else {
-      setProfile(null);
-    }
+    const u = auth.currentUser;
+    const snap = await getDoc(doc(db, "users", u.uid));
+    const raw = snap.exists()
+      ? ({ id: snap.id, ...(snap.data() as Omit<UserProfile, "id">) } as UserProfile)
+      : null;
+    setProfile(applyDemoBypass(u.uid, u.email, raw));
   }, []);
 
   useEffect(() => {
@@ -163,15 +161,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubProfile = onSnapshot(
         doc(db, "users", nextUser.uid),
         (snap) => {
-          setProfile(
-            snap.exists()
-              ? ({ id: snap.id, ...(snap.data() as Omit<UserProfile, "id">) } as UserProfile)
-              : null
-          );
+          const raw = snap.exists()
+            ? ({ id: snap.id, ...(snap.data() as Omit<UserProfile, "id">) } as UserProfile)
+            : null;
+          setProfile(applyDemoBypass(nextUser.uid, nextUser.email, raw));
           setInitializing(false);
         },
         (error) => {
           console.error("Auth profile listener failed:", error);
+          // Demo accounts still work if Firestore rules block reads/writes.
+          setProfile(
+            applyDemoBypass(nextUser.uid, nextUser.email, null)
+          );
           setInitializing(false);
         }
       );

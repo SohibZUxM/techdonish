@@ -41,6 +41,20 @@ async function ensureUser(auth, email, password) {
   }
 }
 
+async function ensureSignedInUser(auth, email, password) {
+  try {
+    const signed = await signInWithEmailAndPassword(auth, email, password);
+    return signed.user;
+  } catch (error) {
+    const code = String(error?.code || "");
+    if (code.includes("invalid-credential") || code.includes("user-not-found")) {
+      const created = await createUserWithEmailAndPassword(auth, email, password);
+      return created.user;
+    }
+    throw error;
+  }
+}
+
 async function run() {
   const root = process.cwd();
   const envPath = path.join(root, ".env");
@@ -82,29 +96,10 @@ async function run() {
     parent: { email: "parent.demo@techdonish.app", password: "Demo@12345" },
   };
 
-  const studentUser = await ensureUser(
+  const studentUser = await ensureSignedInUser(
     auth,
     demoAccounts.student.email,
     demoAccounts.student.password
-  );
-  await signOut(auth);
-  const teacherUser = await ensureUser(
-    auth,
-    demoAccounts.teacher.email,
-    demoAccounts.teacher.password
-  );
-  await signOut(auth);
-  const parentUser = await ensureUser(
-    auth,
-    demoAccounts.parent.email,
-    demoAccounts.parent.password
-  );
-  await signOut(auth);
-
-  await signInWithEmailAndPassword(
-    auth,
-    demoAccounts.teacher.email,
-    demoAccounts.teacher.password
   );
 
   const ids = {
@@ -131,6 +126,13 @@ async function run() {
     },
     { merge: true }
   );
+  await signOut(auth);
+
+  const teacherUser = await ensureSignedInUser(
+    auth,
+    demoAccounts.teacher.email,
+    demoAccounts.teacher.password
+  );
 
   await setDoc(
     doc(db, "users", teacherUser.uid),
@@ -144,6 +146,13 @@ async function run() {
       updatedAt: serverTimestamp(),
     },
     { merge: true }
+  );
+  await signOut(auth);
+
+  const parentUser = await ensureSignedInUser(
+    auth,
+    demoAccounts.parent.email,
+    demoAccounts.parent.password
   );
 
   await setDoc(
@@ -159,6 +168,13 @@ async function run() {
       updatedAt: serverTimestamp(),
     },
     { merge: true }
+  );
+  await signOut(auth);
+
+  await signInWithEmailAndPassword(
+    auth,
+    demoAccounts.teacher.email,
+    demoAccounts.teacher.password
   );
 
   await setDoc(
@@ -273,6 +289,7 @@ async function run() {
   );
 
   console.log("Seed completed.");
+  console.log(`Project: ${firebaseConfig.projectId}`);
   console.log("Demo logins:");
   console.log(`Student: ${demoAccounts.student.email} / ${demoAccounts.student.password}`);
   console.log(`Teacher: ${demoAccounts.teacher.email} / ${demoAccounts.teacher.password}`);

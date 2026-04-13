@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node build_presentation.js)",
+      "Bash(npm install:*)",
+      "Bash(node -e \"require\\('pptxgenjs'\\); console.log\\('ok'\\)\")",
+      "Bash(npm root:*)",
+      "Bash(node -e \"require\\(require\\('child_process'\\).execSync\\('npm root -g'\\).toString\\(\\).trim\\(\\) + '/pptxgenjs'\\); console.log\\('ok'\\)\")",
+      "Bash(python \"C:\\\\Users\\\\s3d city\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\255cf4b4-4b28-470c-9064-848601be65fd\\\\bd775183-b09f-45ec-9073-6a72c59d4ac5\\\\skills\\\\pptx\\\\scripts\\\\office\\\\soffice.py\" --headless --convert-to pdf TechDonish_Presentation.pptx)",
+      "Bash(python \"C:\\\\Users\\\\s3d city\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\255cf4b4-4b28-470c-9064-848601be65fd\\\\bd775183-b09f-45ec-9073-6a72c59d4ac5\\\\skills\\\\pptx\\\\scripts\\\\soffice.py\" --headless --convert-to pdf TechDonish_Presentation.pptx)",
+      "Bash(python 'C:\\\\Users\\\\s3d city\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\255cf4b4-4b28-470c-9064-848601be65fd\\\\bd775183-b09f-45ec-9073-6a72c59d4ac5\\\\skills\\\\pptx/scripts/office/soffice.py' --headless --convert-to pdf TechDonish_Presentation.pptx)",
+      "Bash(python \"C:/Users/s3d city/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/255cf4b4-4b28-470c-9064-848601be65fd/bd775183-b09f-45ec-9073-6a72c59d4ac5/skills/pptx/scripts/office/soffice.py\" --headless --convert-to pdf \"C:/Users/s3d city/Desktop/Projects/Applications/Original/TechDonish/docs/TechDonish_Presentation.pptx\")",
+      "Bash(python \"C:\\\\Users\\\\s3d city\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\255cf4b4-4b28-470c-9064-848601be65fd\\\\bd775183-b09f-45ec-9073-6a72c59d4ac5\\\\skills\\\\pptx\\\\scripts\\\\office\\\\soffice.py\")",
+      "Bash(python \"/c/Users/s3d city/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/255cf4b4-4b28-470c-9064-848601be65fd/bd775183-b09f-45ec-9073-6a72c59d4ac5/skills/pptx/scripts/office/soffice.py\" --headless --convert-to pdf \"/c/Users/s3d city/Desktop/Projects/Applications/Original/TechDonish/docs/TechDonish_Presentation.pptx\")",
+      "Bash(cp \"/c/Users/s3d city/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/255cf4b4-4b28-470c-9064-848601be65fd/bd775183-b09f-45ec-9073-6a72c59d4ac5/skills/pptx/scripts/office/soffice.py\" /tmp/soffice.py)",
+      "Bash(python /tmp/soffice.py --headless --convert-to pdf \"/c/Users/s3d city/Desktop/Projects/Applications/Original/TechDonish/docs/TechDonish_Presentation.pptx\")"
+    ]
+  }
+}
