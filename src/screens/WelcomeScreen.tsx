@@ -83,7 +83,7 @@ export function WelcomeScreen({ navigation }: Props) {
           Empowering <Text style={styles.accent}>Education</Text> for Tomorrow
         </Text>
         <Text style={styles.heroBody}>
-          Hamsafar brings students, teachers, parents, and administrators into
+          TechDonish brings students, teachers, parents, and administrators into
           one connected mobile experience with realtime academic data and
           role-based tools.
         </Text>
@@ -119,7 +119,7 @@ export function WelcomeScreen({ navigation }: Props) {
 
       <SurfaceCard>
         <SectionTitle
-          title="Why Choose Hamsafar?"
+          title="Why Choose TechDonish?"
           subtitle="Desktop product details carried into a touch-first design."
         />
         <View style={styles.featureGrid}>
@@ -150,7 +150,7 @@ export function WelcomeScreen({ navigation }: Props) {
         <Text style={styles.ctaTitle}>Ready to transform education?</Text>
         <Text style={styles.ctaBody}>
           Join thousands of students, teachers, and parents who rely on
-          Hamsafar to stay connected to their educational journey.
+          TechDonish to stay connected to their educational journey.
         </Text>
         <PrimaryButton
           label="Get Started"
@@ -159,7 +159,7 @@ export function WelcomeScreen({ navigation }: Props) {
       </SurfaceCard>
 
       <SurfaceCard style={styles.footerCard}>
-        <Text style={styles.footerTitle}>Hamsafar</Text>
+        <Text style={styles.footerTitle}>TechDonish</Text>
         <Text style={styles.footerBody}>
           Learning Excellence with realtime access to classes, grades,
           resources, approvals, and family updates.

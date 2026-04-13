@@ -1,7 +1,7 @@
 {
-  "name": "Hamsafar Mobile",
-  "short_name": "Hamsafar",
-  "description": "Hamsafar education portal with student, parent, and teacher access.",
+  "name": "TechDonish",
+  "short_name": "TechDonish",
+  "description": "TechDonish education portal with student, parent, and teacher access.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

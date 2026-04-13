@@ -13,25 +13,70 @@ import type { Role } from "../types";
 
 export const heroImageUri =
   "https://images.pexels.com/photos/1181395/pexels-photo-1181395.jpeg?auto=compress&cs=tinysrgb&w=1600";
-const brandLogoSource = require("../../assets/brand-logo.png");
 
-export function HamsafarLogo({
+const BRAND_NAME = "TechDonish";
+const BRAND_NAME_LOWER = BRAND_NAME.toLowerCase();
+
+export function TechDonishLogo({
   size = 68,
+  compact = false,
 }: {
   size?: number;
+  /** Monogram only — use beside a separate title (e.g. role name). */
+  compact?: boolean;
 }) {
+  const markHeight = size * 0.72;
+  const markWidth = compact ? markHeight * 1.05 : size * 0.58;
+  const radiusPx = size * 0.14;
+  const tdSize = size * (compact ? 0.4 : 0.36);
+
+  const mark = (
+    <LinearGradient
+      colors={[colors.primary, colors.purple]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[
+        styles.logoMark,
+        {
+          width: markWidth,
+          height: markHeight,
+          borderRadius: radiusPx,
+        },
+      ]}
+    >
+      <Text style={[styles.logoMarkText, { fontSize: tdSize }]}>TD</Text>
+    </LinearGradient>
+  );
+
+  if (compact) {
+    return (
+      <View style={[styles.logoRow, { minHeight: markHeight }]}>{mark}</View>
+    );
+  }
+
+  const wordSize = Math.max(14, size * 0.2);
   return (
-    <Image
-      source={brandLogoSource}
-      contentFit="contain"
-      transition={200}
-      style={{ width: size * 1.5, height: size }}
-    />
+    <View
+      style={[
+        styles.logoRow,
+        {
+          minHeight: markHeight,
+          maxWidth: size * 1.65,
+          gap: spacing.sm,
+        },
+      ]}
+    >
+      {mark}
+      <View style={styles.logoWordmark}>
+        <Text style={[styles.logoTech, { fontSize: wordSize }]}>Tech</Text>
+        <Text style={[styles.logoDonish, { fontSize: wordSize }]}>Donish</Text>
+      </View>
+    </View>
   );
 }
 
 export function BrandHeader({
-  title = "Hamsafar",
+  title = BRAND_NAME,
   subtitle = "",
   onPressLogo,
   logoSize,
@@ -43,10 +88,12 @@ export function BrandHeader({
   logoSize?: number;
   style?: StyleProp<ViewStyle>;
 }) {
-  const showTitle = title.trim().toLowerCase() !== "hamsafar";
+  const showTitle = title.trim().toLowerCase() !== BRAND_NAME_LOWER;
   const showSubtitle = subtitle.trim().length > 0;
   const resolvedLogoSize = logoSize ?? (showTitle ? 88 : 116);
-  const logo = <HamsafarLogo size={resolvedLogoSize} />;
+  const logo = (
+    <TechDonishLogo size={resolvedLogoSize} compact={showTitle} />
+  );
 
   return (
     <View style={[styles.brandRow, style]}>
@@ -145,6 +192,36 @@ export function FeatureTile({
 }
 
 const styles = StyleSheet.create({
+  logoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  logoMark: {
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadow.card,
+    shadowOpacity: 0.12,
+  },
+  logoMarkText: {
+    color: "#ffffff",
+    fontWeight: "900",
+    letterSpacing: -0.5,
+  },
+  logoWordmark: {
+    justifyContent: "center",
+    gap: 0,
+  },
+  logoTech: {
+    color: colors.primary,
+    fontWeight: "900",
+    letterSpacing: -0.3,
+  },
+  logoDonish: {
+    color: colors.text,
+    fontWeight: "900",
+    letterSpacing: -0.3,
+    marginTop: -2,
+  },
   brandRow: {
     flexDirection: "row",
     alignItems: "center",

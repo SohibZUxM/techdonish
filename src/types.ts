@@ -29,4 +29,4 @@ export const roleTitles: Record<Role, string> = {
 };
 
 export const getUserDisplay = (user?: Partial<UserProfile> | null) =>
-  user?.fullName || user?.email || "Hamsafar user";
+  user?.fullName || user?.email || "TechDonish user";

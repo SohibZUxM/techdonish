@@ -61,7 +61,7 @@ export function HeaderCard({
 }) {
   return (
     <LinearGradient colors={gradientColors as [string, string]} style={styles.headerCard}>
-      <Text style={styles.headerEyebrow}>Hamsafar</Text>
+      <Text style={styles.headerEyebrow}>TechDonish</Text>
       <Text style={styles.headerTitle}>{title}</Text>
       <Text style={styles.headerSubtitle}>{subtitle}</Text>
     </LinearGradient>

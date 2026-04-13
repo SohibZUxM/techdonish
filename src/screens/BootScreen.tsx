@@ -7,7 +7,7 @@ export function BootScreen() {
     <Screen scroll={false}>
       <View style={styles.centerBlock}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.centerTitle}>Loading Hamsafar</Text>
+        <Text style={styles.centerTitle}>Loading TechDonish</Text>
         <Text style={styles.centerBody}>
           Preparing your mobile workspace and realtime data.
         </Text>

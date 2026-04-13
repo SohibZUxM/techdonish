@@ -1,4 +1,4 @@
-const CACHE_NAME = "hamsafar-pwa-v1";
+const CACHE_NAME = "techdonish-pwa-v1";
 const APP_SHELL = ["/", "/manifest.json", "/icon-192.png", "/icon-512.png", "/apple-touch-icon.png"];
 
 self.addEventListener("install", (event) => {
