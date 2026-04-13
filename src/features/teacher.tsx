@@ -32,16 +32,18 @@ import { getUserDisplay } from "../types";
 import { HeaderCard } from "../components/ui";
 
 function useTeacherData() {
-  const { user, profile } = useAuth();
+  const { user, profile, isLocalDemoSession } = useAuth();
   const teacherLookupIds = useMemo(
     () => uniqueStrings([user?.uid, profile?.id]),
     [profile?.id, user?.uid]
   );
+  const firestoreLive =
+    !isLocalDemoSession && teacherLookupIds.length > 0;
   const { data: classes } = useRealtimeWhereIn<any>(
     "classes",
     "teacherUid",
     teacherLookupIds,
-    teacherLookupIds.length > 0
+    firestoreLive
   );
   const classIds = useMemo(
     () => uniqueStrings(classes.map((item) => item.id)),
@@ -51,37 +53,37 @@ function useTeacherData() {
     "exams",
     "teacherUid",
     teacherLookupIds,
-    teacherLookupIds.length > 0
+    firestoreLive
   );
   const { data: grades } = useRealtimeWhereIn<any>(
     "grades",
     "teacherUid",
     teacherLookupIds,
-    teacherLookupIds.length > 0
+    firestoreLive
   );
   const { data: attendance } = useRealtimeWhereIn<any>(
     "attendance",
     "teacherUid",
     teacherLookupIds,
-    teacherLookupIds.length > 0
+    firestoreLive
   );
   const { data: sessions } = useRealtimeWhereIn<any>(
     "classSessions",
     "teacherUid",
     teacherLookupIds,
-    teacherLookupIds.length > 0
+    firestoreLive
   );
   const { data: resources } = useRealtimeWhereIn<any>(
     "resources",
     "teacherUid",
     teacherLookupIds,
-    teacherLookupIds.length > 0
+    firestoreLive
   );
   const { data: enrollments } = useRealtimeWhereIn<any>(
     "enrollments",
     "classId",
     classIds,
-    classIds.length > 0
+    firestoreLive && classIds.length > 0
   );
   const studentIds = useMemo(
     () => uniqueStrings(enrollments.map((item) => item.studentUid)),
@@ -90,7 +92,7 @@ function useTeacherData() {
   const { data: users } = useRealtimeDocsByIds<any>(
     "users",
     studentIds,
-    studentIds.length > 0
+    firestoreLive && studentIds.length > 0
   );
   const students = users.filter((item) => item.role === "student");
   const studentMap = useMemo(
@@ -105,6 +107,7 @@ function useTeacherData() {
   return {
     user,
     profile,
+    isLocalDemoSession,
     classes: [...classes].sort(
       (a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)
     ),
@@ -325,6 +328,10 @@ export function TeacherActionsScreen() {
   }));
 
   const addExam = async () => {
+    if (data.isLocalDemoSession) {
+      setHelperText("Demo mode: data is offline preview only.");
+      return;
+    }
     if (!examClassId || !examTitle.trim()) return;
     await addDoc(collection(db, "exams"), {
       classId: examClassId,
@@ -339,6 +346,10 @@ export function TeacherActionsScreen() {
   };
 
   const addGrade = async () => {
+    if (data.isLocalDemoSession) {
+      setHelperText("Demo mode: data is offline preview only.");
+      return;
+    }
     if (!gradeClassId || !gradeStudentId || !gradeScore.trim()) return;
     await addDoc(collection(db, "grades"), {
       classId: gradeClassId,
@@ -356,6 +367,10 @@ export function TeacherActionsScreen() {
   };
 
   const addResourceLink = async () => {
+    if (data.isLocalDemoSession) {
+      setHelperText("Demo mode: data is offline preview only.");
+      return;
+    }
     if (!resourceClassId || !resourceTitle.trim() || !resourceUrl.trim()) return;
     await addDoc(collection(db, "resources"), {
       classId: resourceClassId,
@@ -383,6 +398,10 @@ export function TeacherActionsScreen() {
   };
 
   const uploadFileResource = async () => {
+    if (data.isLocalDemoSession) {
+      setHelperText("Demo mode: data is offline preview only.");
+      return;
+    }
     if (!resourceClassId || !pickedFile) return;
 
     const response = await fetch(pickedFile.uri);
@@ -412,6 +431,10 @@ export function TeacherActionsScreen() {
   };
 
   const addSession = async () => {
+    if (data.isLocalDemoSession) {
+      setHelperText("Demo mode: data is offline preview only.");
+      return;
+    }
     if (!sessionClassId) return;
     const now = new Date();
     now.setHours(now.getHours() + 1, 0, 0, 0);

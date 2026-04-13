@@ -26,34 +26,35 @@ import { colors, rolePalette, spacing } from "../theme";
 import { getUserDisplay } from "../types";
 
 function useParentData() {
-  const { profile } = useAuth();
+  const { profile, isLocalDemoSession } = useAuth();
   const childIds = useMemo(
     () => uniqueStrings(profile?.childStudentIds || []),
     [profile?.childStudentIds]
   );
+  const firestoreLive = !isLocalDemoSession && childIds.length > 0;
   const { data: linkedUsers } = useRealtimeDocsByIds<any>(
     "users",
     childIds,
-    childIds.length > 0
+    firestoreLive
   );
   const students = linkedUsers.filter((item) => item.role === "student");
   const { data: enrollments } = useRealtimeWhereIn<any>(
     "enrollments",
     "studentUid",
     childIds,
-    childIds.length > 0
+    firestoreLive
   );
   const { data: grades } = useRealtimeWhereIn<any>(
     "grades",
     "studentUid",
     childIds,
-    childIds.length > 0
+    firestoreLive
   );
   const { data: attendance } = useRealtimeWhereIn<any>(
     "attendance",
     "studentUid",
     childIds,
-    childIds.length > 0
+    firestoreLive
   );
   const classIds = useMemo(
     () => uniqueStrings(enrollments.map((item) => item.classId)),
@@ -62,7 +63,7 @@ function useParentData() {
   const { data: classes } = useRealtimeDocsByIds<any>(
     "classes",
     classIds,
-    classIds.length > 0
+    firestoreLive && classIds.length > 0
   );
   const courseIds = useMemo(
     () => uniqueStrings(classes.map((item) => item.courseId)),
@@ -71,19 +72,19 @@ function useParentData() {
   const { data: courses } = useRealtimeDocsByIds<any>(
     "courses",
     courseIds,
-    courseIds.length > 0
+    firestoreLive && courseIds.length > 0
   );
   const { data: resources } = useRealtimeWhereIn<any>(
     "resources",
     "classId",
     classIds,
-    classIds.length > 0
+    firestoreLive && classIds.length > 0
   );
   const { data: sessions } = useRealtimeWhereIn<any>(
     "classSessions",
     "classId",
     classIds,
-    classIds.length > 0
+    firestoreLive && classIds.length > 0
   );
 
   const classMap = useMemo(

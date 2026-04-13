@@ -15,6 +15,14 @@ type DemoRow = {
   childStudentIds?: string[];
 };
 
+/** Trim, lowercase, strip zero-width / BOM chars (fixes copy/paste mismatches). */
+export function normalizeDemoEmail(email: string): string {
+  return email
+    .trim()
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .toLowerCase();
+}
+
 const DEMO_BY_EMAIL: Record<string, DemoRow> = {
   "student.demo@techdonish.app": {
     uid: DEMO_STUDENT_UID,
@@ -44,10 +52,8 @@ export type DemoSession = {
 
 export function isDemoAccountEmail(email: string | null | undefined): boolean {
   if (!email?.trim()) return false;
-  return Object.prototype.hasOwnProperty.call(
-    DEMO_BY_EMAIL,
-    email.trim().toLowerCase()
-  );
+  const key = normalizeDemoEmail(email);
+  return Object.prototype.hasOwnProperty.call(DEMO_BY_EMAIL, key);
 }
 
 /**
@@ -58,7 +64,7 @@ export function assertDemoLocalLogin(
   email: string,
   password: string
 ): DemoSession {
-  const key = email.trim().toLowerCase();
+  const key = normalizeDemoEmail(email);
   const row = DEMO_BY_EMAIL[key];
   if (!row) {
     throw new Error("Unknown demo account.");

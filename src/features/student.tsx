@@ -29,12 +29,13 @@ import { colors, radius, rolePalette, spacing } from "../theme";
 import { getUserDisplay } from "../types";
 
 function useStudentData() {
-  const { user, profile } = useAuth();
+  const { user, profile, isLocalDemoSession } = useAuth();
   const uid = user?.uid || "";
+  const firestoreLive = !!uid && !isLocalDemoSession;
   const { data: enrollments } = useRealtimeList<any>(
     () => query(collection(db, "enrollments"), where("studentUid", "==", uid)),
     [uid],
-    !!uid
+    firestoreLive
   );
   const classIds = useMemo(
     () => uniqueStrings(enrollments.map((item) => item.classId)),
@@ -43,7 +44,7 @@ function useStudentData() {
   const { data: classes } = useRealtimeDocsByIds<any>(
     "classes",
     classIds,
-    classIds.length > 0
+    firestoreLive && classIds.length > 0
   );
   const courseIds = useMemo(
     () => uniqueStrings(classes.map((item) => item.courseId)),
@@ -52,29 +53,29 @@ function useStudentData() {
   const { data: courses } = useRealtimeDocsByIds<any>(
     "courses",
     courseIds,
-    courseIds.length > 0
+    firestoreLive && courseIds.length > 0
   );
   const { data: gradesRaw } = useRealtimeList<any>(
     () => query(collection(db, "grades"), where("studentUid", "==", uid)),
     [uid],
-    !!uid
+    firestoreLive
   );
   const { data: attendance } = useRealtimeList<any>(
     () => query(collection(db, "attendance"), where("studentUid", "==", uid)),
     [uid],
-    !!uid
+    firestoreLive
   );
   const { data: sessions } = useRealtimeWhereIn<any>(
     "classSessions",
     "classId",
     classIds,
-    classIds.length > 0
+    firestoreLive && classIds.length > 0
   );
   const { data: resources } = useRealtimeWhereIn<any>(
     "resources",
     "classId",
     classIds,
-    classIds.length > 0
+    firestoreLive && classIds.length > 0
   );
 
   const classesById = useMemo(

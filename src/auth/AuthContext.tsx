@@ -31,6 +31,7 @@ import {
   assertDemoLocalLogin,
   demoSessionToProfile,
   isDemoAccountEmail,
+  normalizeDemoEmail,
   type DemoSession,
 } from "../lib/demoLocalAuth";
 import { auth, db } from "../lib/firebase";
@@ -39,6 +40,8 @@ import type { AuthSessionUser, Role, UserProfile } from "../types";
 type AuthContextValue = {
   initializing: boolean;
   user: AuthSessionUser | null;
+  /** True when using built-in demo logins (no Firebase Auth session). */
+  isLocalDemoSession: boolean;
   profile: UserProfile | null;
   refreshProfile: () => Promise<void>;
   authenticateForRole: (params: {
@@ -54,6 +57,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue>({
   initializing: true,
   user: null,
+  isLocalDemoSession: false,
   profile: null,
   refreshProfile: async () => {},
   authenticateForRole: async () => {},
@@ -149,6 +153,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   }, [demoSession, firebaseUser]);
 
+  const isLocalDemoSession = demoSession !== null;
+
   const refreshProfile = useCallback(async () => {
     if (demoSession) {
       setProfile(demoSessionToProfile(demoSession));
@@ -217,7 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const authenticateForRole = useCallback<
     AuthContextValue["authenticateForRole"]
   >(async ({ role, mode, fullName, email, password }) => {
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = normalizeDemoEmail(email);
 
     if (!normalizedEmail || !password.trim()) {
       throw new Error("Please enter your email and password.");
@@ -226,7 +232,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (isDemoAccountEmail(normalizedEmail)) {
         const session = assertDemoLocalLogin(normalizedEmail, password);
-        await signOut(auth);
+        try {
+          await signOut(auth);
+        } catch {
+          /* no Firebase session or sign-out not needed */
+        }
         setFirebaseUser(null);
         setDemoSession(session);
         setProfile(demoSessionToProfile(session));
@@ -277,7 +287,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOutUser = useCallback(async () => {
     setDemoSession(null);
-    await signOut(auth);
+    try {
+      await signOut(auth);
+    } catch {
+      /* already signed out */
+    }
   }, []);
 
   return (
@@ -285,6 +299,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         initializing,
         user,
+        isLocalDemoSession,
         profile,
         refreshProfile,
         authenticateForRole,
